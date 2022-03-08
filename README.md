@@ -11,7 +11,7 @@ WIP!
 - [ ] Create guide on how to run this project from tests to actual deployment (with config help)
 - [ ] Have a landing page that will be built upon (3/19 Jacky's job)
 - [ ] Have backend where we connect wallet, check balance, interact with contract button (i.e. getBalance) (3/19 Henry's job)
-- [ ] Have a color scheme picked + some direction of what art we want like concepts (3/26 Tommy's job, group is part of this too)
+- [ ] Have a color scheme picked + some direction of what art we want like concepts + a name (3/26 Tommy's job, group is part of this too)
 
 ### Contracts
 - [ ] Have ERC721A work like a regular NFT (mint, transfer, burn, approval, etc)
@@ -21,6 +21,7 @@ WIP!
 ### Testing
 - [x] Contract deployment (ownership and stuff)
 - [x] Minting on different wallets
+- [x] Transfer NFT between two wallets
 - [ ] Setting approval (make a mimic opensea contract, or use the real one's code)
 - [ ] Any interactions with contract that are not intended (i.e. non owner withdrawal or mint while paused)
 - [ ] Test if refund works on mint
