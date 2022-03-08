@@ -21,8 +21,7 @@ describe("KingdomsNFT", function () {
         await mintingTx.wait();
     }
 
-    // `beforeEach` will run before each test, re-deploying the contract every
-    // time. It receives a callback, which can be async.
+    // `beforeEach` will run before each test, re-deploying the contract every time
     beforeEach(async function () {
         Token = await ethers.getContractFactory("KingdomsNFT");
         [owner, addr1, addr2, ...addrs] = await ethers.getSigners();
@@ -31,8 +30,7 @@ describe("KingdomsNFT", function () {
 
     describe("Deployment", function () {
         it("Should set the right owner", async function () {
-            // This test expects the owner variable stored in the contract to be equal
-            // to our Signer's owner.
+            // This test expects the owner variable stored in the contract to be equal to our Signer's owner.
             expect(await knft.owner()).to.equal(owner.address);
         });
 
