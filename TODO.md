@@ -13,17 +13,14 @@
     - [ ] Style of art
 
 ### Contracts
-- [ ] Have ERC721A work like a regular NFT (mint, transfer, burn, approval, etc)
-    - [x] Mint
-    - [x] Transfer
-    - [x] Burn
-    - [x] Approve
+- [ ] Have ERC721A function like a regular NFT
+    - [x] Mint, Transfer, Burn, Approve
+    - [ ] Sale state variables and get/setters
+    - [ ] Have metadata be visible on opensea test network
+    - [ ] Have traits working per nft
     - [ ] WIP!
-- [ ] Create a ERC20 and have it work like a regular coin (transfer, burn, mint, approval, etc)
-    - [ ] Mint
-    - [ ] Transfer
-    - [ ] Burn
-    - [ ] Approve
+- [ ] Create a ERC20 and have it function like a regular coin
+    - [ ] Mint, Transfer, Burn, Approve
     - [ ] WIP!
 - [ ] Work on staking ERC721A to earn the ERC20 (AFTER BOTH ARE 100% WORKING WITH TESTS)
 

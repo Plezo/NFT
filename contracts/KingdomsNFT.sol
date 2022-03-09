@@ -10,6 +10,8 @@ import "@openzeppelin/contracts/utils/Counters.sol";
 
 contract KingdomsNFT is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
 
+    uint256 public MAX_SUPPLY = 8888;  // consider making immutable
+
     uint256 public price = 0.08 ether;
     bool public saleLive = false;
     constructor() ERC721A("KingdomsNFT", "KNFT") {}
@@ -18,15 +20,17 @@ contract KingdomsNFT is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
         return "ipfs://";
     }
 
-    function flipSaleState() external onlyOwner {
-        saleLive = !saleLive;
-    }
-
     function publicMint(uint256 amount) external payable {
-        require(msg.value == price * amount, "Incorrect ETH amount!");
         require(saleLive == true, "Sale is not live!");
+        require(tx.origin ==  msg.sender, "No contract mints!");
+        require(this.totalSupply() + amount <= MAX_SUPPLY, "Max supply reached!");
+        require(msg.value == price * amount, "Incorrect ETH amount!");
         
         _safeMint(msg.sender, amount);
+    }
+
+    function flipSaleState() external onlyOwner {
+        saleLive = !saleLive;
     }
 
     function withdraw(uint256 amount) external onlyOwner {
