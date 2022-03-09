@@ -2,6 +2,8 @@ const { expect } = require("chai");
 const { ethers, waffle } = require("hardhat");
 
 describe("KingdomsNFT", function () {
+    const price = 0.08;
+
     let Token;
     let knft;
     let owner;
@@ -9,8 +11,8 @@ describe("KingdomsNFT", function () {
     let addr2;
     let addrs;
 
-    async function mint(token, signer, amount, price) {
-        const mintingTx = await token.connect(signer).publicMint(amount, {value: ethers.utils.parseEther(`${price}`)});
+    async function mint(token, signer, amount) {
+        const mintingTx = await token.connect(signer).publicMint(amount, {value: ethers.utils.parseEther(`${price*amount}`)});
         await mintingTx.wait();
     }
 
@@ -42,10 +44,10 @@ describe("KingdomsNFT", function () {
             const initialSupply = await knft.totalSupply();
 
             const addr1Balance = await knft.balanceOf(addr1.address);
-            await mint(knft, addr1, amount, 0.4);
+            await mint(knft, addr1, amount);
 
             const addr2Balance = await knft.balanceOf(addr2.address);
-            await mint(knft, addr2, amount, 0.4);
+            await mint(knft, addr2, amount);
 
             expect(await knft.balanceOf(addr1.address)).to.equal(addr1Balance + amount);
             expect(await knft.balanceOf(addr2.address)).to.equal(addr2Balance + amount);
@@ -56,8 +58,8 @@ describe("KingdomsNFT", function () {
             const amount = 5;
 
             // Mints the tokens for the two addresses
-            await mint(knft, addr1, amount, 0.4);
-            await mint(knft, addr2, amount, 0.4);
+            await mint(knft, addr1, amount);
+            await mint(knft, addr2, amount);
 
 
             // Transfer 1 tokens from addr1 to addr2
@@ -74,7 +76,7 @@ describe("KingdomsNFT", function () {
         });
 
         it("Should be able to transfer another address or burn if approved", async function () {
-            await mint(knft, addr1, 2, 0.16);
+            await mint(knft, addr1, 2);
 
             // transfer should not work
             await expect(
@@ -82,7 +84,7 @@ describe("KingdomsNFT", function () {
             .to.be.revertedWith("TransferCallerNotOwnerNorApproved()");
 
             // burn should not work either
-            await expect(knft.connect(addr2).burn(1)).to.be.revertedWith("()");
+            await expect(knft.connect(addr2).burn(1)).to.be.revertedWith("TransferCallerNotOwnerNorApproved()");
 
             // approves addr2 transfer or burn addr1's nft's
             await knft.connect(addr1).setApprovalForAll(addr2.address, true);
@@ -101,7 +103,7 @@ describe("KingdomsNFT", function () {
         })
 
         it("Should be able to burn selected tokenid", async function () {
-            await mint(knft, addr1, 1, 0.08);
+            await mint(knft, addr1, 1);
             expect(await knft.balanceOf(addr1.address)).to.equal(1);
             expect(await knft.totalSupply()).to.equal(1);
 
@@ -146,7 +148,7 @@ describe("KingdomsNFT", function () {
 
         it("Should fail to transfer if addr2 tries transfering an nft they don't own", async function () {
             // Mints the tokens for addr1
-            await mint(knft, addr1, 5, 0.4);
+            await mint(knft, addr1, 5);
 
             const initialOwnerBalance = await knft.balanceOf(addr1.address);
         
@@ -171,7 +173,7 @@ describe("KingdomsNFT", function () {
             // sets it back to false
             knft.connect(owner).flipSaleState();
             await expect(
-                knft.connect(addr1).publicMint(1, {value: ethers.utils.parseEther("0.08")}))
+                knft.connect(addr1).publicMint(1, {value: ethers.utils.parseEther(`${price}`)}))
             .to.be.revertedWith("Sale is not live!");
         })
     })
