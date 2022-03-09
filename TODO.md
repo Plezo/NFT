@@ -15,8 +15,8 @@
 - [ ] Have ERC721A work like a regular NFT (mint, transfer, burn, approval, etc)
     - [x] Mint
     - [x] Transfer
-    - [ ] Burn
-    - [ ] Approve
+    - [x] Burn
+    - [x] Approve
     - [ ] WIP!
 - [ ] Create a ERC20 and have it work like a regular coin (transfer, burn, mint, approval, etc)
     - [ ] Mint
@@ -30,12 +30,14 @@
 - [x] Contract deployment (ownership and stuff)
 - [x] Minting on different wallets
 - [x] Transfer NFT between two wallets
-- [ ] Setting approval (make a mimic opensea contract, or use the real one's code)
-- [ ] Any interactions with contract that are not intended (i.e. non owner withdrawal or mint while paused)
+- [x] Setting approval
+- [ ] Withdraw funds
+- [ ] Any interactions with contract that are not intended
+    - [x] Minting with invalid amount of ETH sent
     - [ ] Non-owner fund withdrawal
-    - [ ] Minting while paused or sale off
+    - [x] Minting while paused or sale off
+    - [x] Non-owner flip sale state
     - [ ] WIP!
-- [ ] Test if refund works on mint
 - [ ] WIP! (will add more as ERC721A development continues, as well as ERC20)
 
 ### Scripts
