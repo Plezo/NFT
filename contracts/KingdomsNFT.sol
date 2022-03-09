@@ -28,4 +28,11 @@ contract KingdomsNFT is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
         
         _safeMint(msg.sender, amount);
     }
+
+    function withdraw(uint256 amount) external onlyOwner {
+        require(amount <= address(this).balance, "Not enough ETH to withdraw!");
+
+        if (amount == 0) payable(msg.sender).transfer(address(this).balance);
+        else payable(msg.sender).transfer(amount);
+    }
 }

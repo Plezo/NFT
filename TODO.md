@@ -10,6 +10,7 @@
 - [ ] Have a color scheme picked + some direction of what art we want like concepts + a name (3/26 Tommy's job, group is part of this too)
     - [ ] Color scheme selected
     - [ ] Name
+    - [ ] Style of art
 
 ### Contracts
 - [ ] Have ERC721A work like a regular NFT (mint, transfer, burn, approval, etc)
@@ -34,7 +35,7 @@
 - [ ] Withdraw funds
 - [ ] Any interactions with contract that are not intended
     - [x] Minting with invalid amount of ETH sent
-    - [ ] Non-owner fund withdrawal
+    - [x] Non-owner fund withdrawal
     - [x] Minting while paused or sale off
     - [x] Non-owner flip sale state
     - [ ] WIP!
