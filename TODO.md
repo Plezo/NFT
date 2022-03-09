@@ -32,7 +32,7 @@
 - [x] Minting on different wallets
 - [x] Transfer NFT between two wallets
 - [x] Setting approval
-- [ ] Withdraw funds
+- [x] Withdraw funds
 - [ ] Any interactions with contract that are not intended
     - [x] Minting with invalid amount of ETH sent
     - [x] Non-owner fund withdrawal
