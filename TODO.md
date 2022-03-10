@@ -16,8 +16,8 @@
 - ERC721A
     - [x] Mint, Transfer, Burn, Approve
     - [ ] Sale state variables and get/setters
-    - [ ] Have metadata be visible on opensea test network
-    - [ ] Have traits working per nft
+    - [ ] Have metadata (just picture for now) be visible on opensea test network
+    - [ ] Figure out trait randomization and apply it to minting process
 - ERC20
     - [x] Mint, Transfer, Burn
 - Staking contract
@@ -30,6 +30,7 @@
     - [x] Transfer NFT between two wallets
     - [x] Setting approval
     - [x] Withdraw funds
+    - [ ] WIP! Work on testing metadata stuff
     - Any interactions with contract that are not intended
         - [x] Minting with invalid amount of ETH sent
         - [x] Non-owner fund withdrawal
