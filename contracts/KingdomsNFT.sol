@@ -14,6 +14,7 @@ contract KingdomsNFT is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
 
     uint256 public price = 0.08 ether;
     bool public saleLive = false;
+    
     constructor() ERC721A("KingdomsNFT", "KNFT") {}
 
     function _baseURI() internal pure override returns (string memory) {
@@ -21,13 +22,15 @@ contract KingdomsNFT is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
     }
 
     function publicMint(uint256 amount) external payable {
-        require(saleLive == true, "Sale is not live!");
+        require(saleLive, "Sale is not live!");
         require(tx.origin ==  msg.sender, "No contract mints!");
         require(this.totalSupply() + amount <= MAX_SUPPLY, "Max supply reached!");
         require(msg.value == price * amount, "Incorrect ETH amount!");
         
         _safeMint(msg.sender, amount);
     }
+
+    // owner functions
 
     function flipSaleState() external onlyOwner {
         saleLive = !saleLive;

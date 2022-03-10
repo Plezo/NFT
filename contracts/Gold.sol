@@ -2,13 +2,10 @@
 pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
-import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/token/ERC20/extensions/draft-ERC20Permit.sol";
 
-contract Gold is ERC20, ERC20Burnable, Pausable, Ownable, ERC20Permit {
-    constructor() ERC20("Gold", "GLD") ERC20Permit("Gold") {
+contract GOLD is ERC20, Ownable {
+    constructor() ERC20("GOLD", "GOLD") {
         gameMasters[owner()] = true;
     }
 
@@ -29,13 +26,5 @@ contract Gold is ERC20, ERC20Burnable, Pausable, Ownable, ERC20Permit {
 
     function editGameMaster(address user, bool gm) external onlyOwner {
         gameMasters[user] = gm;
-    }
-
-    function _beforeTokenTransfer(address from, address to, uint256 amount)
-        internal
-        whenNotPaused
-        override
-    {
-        super._beforeTokenTransfer(from, to, amount);
     }
 }
