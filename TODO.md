@@ -2,10 +2,10 @@
 
 ### General + Reminders
 - [x] Create guide on how to run this project from tests to actual deployment (with config help)
-- [ ] Have a landing page that will be built upon (3/19 Jacky's job)
+- [ ] Have a landing page that will be built upon + navbar (3/19 Jacky's job)
 - Have backend where we connect wallet, check balance, interact with contract button (i.e. getBalance) (3/19 Henry's job)
-    - [ ] Connect wallet button
-    - [ ] Check ETH balance
+    - [x] Connect wallet button
+    - [x] Check ETH balance
     - [ ] Interact with contract button (any function)
 - Have a color scheme picked + some direction of what art we want like concepts + a name (3/26 Tommy's job, group is part of this too)
     - [ ] Color scheme selected
