@@ -95,7 +95,7 @@ contract KingdomsNFT is ERC721A, ERC721ABurnable, Ownable, Pausable, ReentrancyG
 
     function flipPause() external onlyOwner {
         if (paused()) _unpause();
-        else if (!paused()) _pause();
+        else _pause();
     }
 
     function withdraw(uint256 amount) external onlyOwner {
