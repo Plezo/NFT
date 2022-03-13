@@ -24,7 +24,7 @@ contract GOLD is ERC20, Ownable {
         _burn(from, amount);
     }
 
-    function editGameMaster(address user, bool gm) external onlyOwner {
+    function editGameMaster(address user, bool gm) external onlyGM {
         gameMasters[user] = gm;
     }
 }

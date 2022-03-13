@@ -3,23 +3,51 @@ pragma solidity ^0.8.4;
 
 import "./ERC721A.sol";
 import "./ERC721ABurnable.sol";
+import "./GOLD.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import '@openzeppelin/contracts/security/Pausable.sol';
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Burnable.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 
-contract KingdomsNFT is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
+contract KingdomsNFT is ERC721A, ERC721ABurnable, Ownable, Pausable, ReentrancyGuard {
 
     uint256 public MAX_SUPPLY = 8888;  // consider making immutable
+    uint256 public DAILY_GOLD_RATE = 100 ether;
+    uint256 public MAX_GOLD_CIRCULATING = 1000000 ether;
 
     uint256 public price = 0.08 ether;
     bool public saleLive = false;
-    
-    constructor() ERC721A("KingdomsNFT", "KNFT") {}
 
-    function _baseURI() internal pure override returns (string memory) {
-        return "ipfs://";
+    GOLD public gold;
+
+    mapping(uint256 => Stake) land;
+
+    struct Stake {
+        address owner;
+        uint256 tokenId;
+        uint256 timeStaked;
     }
+
+    event TokenStaked(address owner, uint256 tokenId, uint256 timeStaked);
+
+    /*
+
+
+    */
+    
+    constructor() ERC721A("KingdomsNFT", "KNFT") {
+        gold = new GOLD();
+        gold.editGameMaster(address(msg.sender), true);
+    }
+    
+    /*
+        ██████  ██    ██ ██████  ██      ██  ██████ 
+        ██   ██ ██    ██ ██   ██ ██      ██ ██      
+        ██████  ██    ██ ██████  ██      ██ ██      
+        ██      ██    ██ ██   ██ ██      ██ ██      
+        ██       ██████  ██████  ███████ ██  ██████ 
+    */
 
     function publicMint(uint256 amount) external payable {
         require(saleLive, "Sale is not live!");
@@ -30,10 +58,44 @@ contract KingdomsNFT is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
         _safeMint(msg.sender, amount);
     }
 
-    // owner functions
+    function stake(uint256 tokenId) external whenNotPaused {
+        require(msg.sender == ownerOf(tokenId));
+
+        _stake(msg.sender, tokenId);
+    }
+
+    function unstake(uint256 tokenId) external whenNotPaused {
+        require(msg.sender == land[tokenId].owner);
+
+        _unstake(tokenId);
+    }
+
+    function claim(uint256 tokenId) external whenNotPaused {
+        require(land[tokenId].tokenId == tokenId);
+        require(msg.sender == land[tokenId].owner);
+
+        uint256 claimAmount = 
+            (block.timestamp - land[tokenId].timeStaked)
+            * (DAILY_GOLD_RATE / 1 days);
+
+        gold.mint(msg.sender, claimAmount);
+    }
+
+    /*
+         ██████  ██     ██ ███    ██ ███████ ██████  
+        ██    ██ ██     ██ ████   ██ ██      ██   ██ 
+        ██    ██ ██  █  ██ ██ ██  ██ █████   ██████  
+        ██    ██ ██ ███ ██ ██  ██ ██ ██      ██   ██ 
+         ██████   ███ ███  ██   ████ ███████ ██   ██ 
+    */
 
     function flipSaleState() external onlyOwner {
         saleLive = !saleLive;
+    }
+
+    function flipPause() external onlyOwner {
+        if (paused()) _unpause();
+        else if (!paused()) _pause();
     }
 
     function withdraw(uint256 amount) external onlyOwner {
@@ -41,5 +103,34 @@ contract KingdomsNFT is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
 
         if (amount == 0) payable(msg.sender).transfer(address(this).balance);
         else payable(msg.sender).transfer(amount);
+    }
+
+    /*
+        ██ ███    ██ ████████ ███████ ██████  ███    ██  █████  ██      
+        ██ ████   ██    ██    ██      ██   ██ ████   ██ ██   ██ ██      
+        ██ ██ ██  ██    ██    █████   ██████  ██ ██  ██ ███████ ██      
+        ██ ██  ██ ██    ██    ██      ██   ██ ██  ██ ██ ██   ██ ██      
+        ██ ██   ████    ██    ███████ ██   ██ ██   ████ ██   ██ ███████ 
+    */
+
+    function _stake(address from, uint256 tokenId) internal {
+        land[tokenId] = Stake({
+            owner: from,
+            tokenId: tokenId,
+            timeStaked: block.timestamp
+        });
+
+        transferFrom(from, address(this), tokenId);
+
+        emit TokenStaked(from, tokenId, block.timestamp);
+    }
+
+    function _unstake(uint256 tokenId) internal {
+        transferFrom(address(this), land[tokenId].owner, tokenId);
+        delete land[tokenId];
+    }
+
+    function _baseURI() internal pure override returns (string memory) {
+        return "ipfs://";
     }
 }
