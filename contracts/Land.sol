@@ -14,10 +14,6 @@ contract Land is IERC721Receiver, Pausable, Ownable {
     uint256 public DAILY_GOLD_RATE = 100 ether;
     uint256 public MAX_GOLD_CIRCULATING = 1000000 ether;
 
-    uint256 public totalStaked;
-    uint256 public numGoldCirculating;
-    uint256 public lastClaimTimestamp;
-
     KingdomsNFT knft;
     GOLD gold;
 
@@ -29,7 +25,6 @@ contract Land is IERC721Receiver, Pausable, Ownable {
 
     mapping(uint256 => Stake) land;
 
-    // idk if we need
     event TokenStaked(address owner, uint256 tokenId, uint256 timeStaked);
 
     constructor(address _knft, address _gold) { 
@@ -37,36 +32,39 @@ contract Land is IERC721Receiver, Pausable, Ownable {
         gold = GOLD(_gold);
     }
 
-    // reconsider this, find another way of generating gold
-    modifier _updateEarnings() {
-        if (numGoldCirculating < MAX_GOLD_CIRCULATING) {
-            numGoldCirculating += 
-            (block.timestamp - lastClaimTimestamp)
-            * totalStaked
-            * DAILY_GOLD_RATE / 1 days; 
-        lastClaimTimestamp = block.timestamp;
-        }
-        _;
-    }
-
-    function stake(address from, uint256 tokenId) external whenNotPaused _updateEarnings {
+    function stake(address from, uint256 tokenId) external whenNotPaused {
         land[tokenId] = Stake({
             owner: from,
             tokenId: tokenId,
             timeStaked: block.timestamp
         });
-        totalStaked += 1;
+
+        knft.transferFrom(from, address(this), tokenId); // this contract needs to be approved
+        
         emit TokenStaked(from, tokenId, block.timestamp);
     }
 
-    // wip
-    function claim() external {
+    function unstake(uint256 tokenId) external whenNotPaused {
+        require(msg.sender == land[tokenId].owner);
 
+        knft.transferFrom(address(this), land[tokenId].owner, tokenId);
+        delete land[tokenId];
+    }
+
+    function claim(uint256 tokenId) external whenNotPaused {
+        require(land[tokenId].tokenId == tokenId);
+        require(msg.sender == land[tokenId].owner);
+
+        uint256 claimAmount = 
+            (block.timestamp - land[tokenId].timeStaked)
+            * (DAILY_GOLD_RATE / 1 days);
+
+        gold.mint(msg.sender, claimAmount);
     }
 
     function flipPause() external onlyOwner {
         if (paused()) _unpause();
-        else if (!paused()) _pause();
+        else _pause();
     }
 
     function onERC721Received(
