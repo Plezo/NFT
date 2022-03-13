@@ -59,26 +59,18 @@ contract KingdomsNFT is ERC721A, ERC721ABurnable, Ownable, Pausable, ReentrancyG
     }
 
     function stake(uint256 tokenId) external whenNotPaused {
-        require(msg.sender == ownerOf(tokenId));
+        require(msg.sender == ownerOf(tokenId), "Cant stake someone elses token!");
 
         _stake(msg.sender, tokenId);
     }
 
-    function unstake(uint256 tokenId) external whenNotPaused {
-        require(msg.sender == land[tokenId].owner);
+    function claim(uint256 tokenId, bool unstake) external whenNotPaused {
+        require(land[tokenId].tokenId == tokenId, "Not staked!");
+        require(msg.sender == land[tokenId].owner, "Can't claim for someone else!");
 
-        _unstake(tokenId);
-    }
+        _claim(msg.sender, tokenId);
 
-    function claim(uint256 tokenId) external whenNotPaused {
-        require(land[tokenId].tokenId == tokenId);
-        require(msg.sender == land[tokenId].owner);
-
-        uint256 claimAmount = 
-            (block.timestamp - land[tokenId].timeStaked)
-            * (DAILY_GOLD_RATE / 1 days);
-
-        gold.mint(msg.sender, claimAmount);
+        if (unstake) _unstake(tokenId);
     }
 
     /*
@@ -128,6 +120,14 @@ contract KingdomsNFT is ERC721A, ERC721ABurnable, Ownable, Pausable, ReentrancyG
     function _unstake(uint256 tokenId) internal {
         transferFrom(address(this), land[tokenId].owner, tokenId);
         delete land[tokenId];
+    }
+
+    function _claim(address to, uint256 tokenId) internal {
+        uint256 claimAmount = 
+            (block.timestamp - land[tokenId].timeStaked)
+            * (DAILY_GOLD_RATE / 1 days);
+
+        gold.mint(to, claimAmount);
     }
 
     function _baseURI() internal pure override returns (string memory) {
