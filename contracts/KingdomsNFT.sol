@@ -12,7 +12,7 @@ import "@openzeppelin/contracts/utils/Counters.sol";
 
 contract KingdomsNFT is ERC721A, ERC721ABurnable, Ownable, Pausable, ReentrancyGuard {
 
-    uint256 public MAX_SUPPLY = 8888;  // consider making immutable
+    uint256 public MAX_SUPPLY = 8888;
     uint256 public DAILY_GOLD_RATE = 100 ether;
     uint256 public MAX_GOLD_CIRCULATING = 1000000 ether;
 
