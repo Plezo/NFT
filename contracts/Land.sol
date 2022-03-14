@@ -2,20 +2,24 @@
 
 pragma solidity ^0.8.4;
 
-import './KingdomsNFT.sol';
-import './GOLD.sol';
+import './Warrior.sol';
+import './RESOURCE.sol';
+import "./ERC721A.sol";
+import "./ERC721ABurnable.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Burnable.sol";
+import "@openzeppelin/contracts/utils/Counters.sol";
 import '@openzeppelin/contracts/security/Pausable.sol';
-import '@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol';
 
-contract Land is IERC721Receiver, Pausable, Ownable {
+contract Land is ERC721A, ERC721ABurnable, Pausable, Ownable, ReentrancyGuard {
 
     // idk if team wants this constant, if not then create setter functions
     uint256 public DAILY_GOLD_RATE = 100 ether;
     uint256 public MAX_GOLD_CIRCULATING = 1000000 ether;
 
-    KingdomsNFT knft;
-    GOLD gold;
+    Warrior warrior;
+    RESOURCE resource;
 
     struct Stake {
         address owner;
@@ -27,54 +31,85 @@ contract Land is IERC721Receiver, Pausable, Ownable {
 
     event TokenStaked(address owner, uint256 tokenId, uint256 timeStaked);
 
-    constructor(address _knft, address _gold) { 
-        knft = KingdomsNFT(_knft);
-        gold = GOLD(_gold);
+    constructor(address _warrior, address _resource) ERC721A("Land", "LAND") { 
+        warrior = Warrior(_warrior);
+        resource = RESOURCE(_resource);
     }
 
-    function stake(address from, uint256 tokenId) external whenNotPaused {
+        /*
+        ██████  ██    ██ ██████  ██      ██  ██████ 
+        ██   ██ ██    ██ ██   ██ ██      ██ ██      
+        ██████  ██    ██ ██████  ██      ██ ██      
+        ██      ██    ██ ██   ██ ██      ██ ██      
+        ██       ██████  ██████  ███████ ██  ██████ 
+    */
+
+    function stake(uint256 tokenId) external whenNotPaused {
+        require(msg.sender == ownerOf(tokenId), "Cant stake someone elses token!");
+
+        _stake(msg.sender, tokenId);
+    }
+
+    function claim(uint256 tokenId, bool unstake) external whenNotPaused {
+        require(land[tokenId].tokenId == tokenId, "Not staked!");
+        require(msg.sender == land[tokenId].owner, "Can't claim for someone else!");
+
+        _claim(msg.sender, tokenId);
+
+        if (unstake) _unstake(tokenId);
+    }
+
+    /*
+        ██ ███    ██ ████████ ███████ ██████  ███    ██  █████  ██      
+        ██ ████   ██    ██    ██      ██   ██ ████   ██ ██   ██ ██      
+        ██ ██ ██  ██    ██    █████   ██████  ██ ██  ██ ███████ ██      
+        ██ ██  ██ ██    ██    ██      ██   ██ ██  ██ ██ ██   ██ ██      
+        ██ ██   ████    ██    ███████ ██   ██ ██   ████ ██   ██ ███████ 
+    */
+
+    function _stake(address from, uint256 tokenId) internal {
         land[tokenId] = Stake({
             owner: from,
             tokenId: tokenId,
             timeStaked: block.timestamp
         });
 
-        knft.transferFrom(from, address(this), tokenId); // this contract needs to be approved
-        
+        transferFrom(from, address(this), tokenId);
+
         emit TokenStaked(from, tokenId, block.timestamp);
     }
 
-    function unstake(uint256 tokenId) external whenNotPaused {
-        require(msg.sender == land[tokenId].owner);
-
-        knft.transferFrom(address(this), land[tokenId].owner, tokenId);
+    function _unstake(uint256 tokenId) internal {
+        transferFrom(address(this), land[tokenId].owner, tokenId);
         delete land[tokenId];
     }
 
-    function claim(uint256 tokenId) external whenNotPaused {
-        require(land[tokenId].tokenId == tokenId);
-        require(msg.sender == land[tokenId].owner);
-
+    function _claim(address to, uint256 tokenId) internal {
         uint256 claimAmount = 
             (block.timestamp - land[tokenId].timeStaked)
             * (DAILY_GOLD_RATE / 1 days);
 
-        gold.mint(msg.sender, claimAmount);
+        resource.mint(to, claimAmount);
     }
+
+    function _baseURI() internal pure override returns (string memory) {
+        return "ipfs://";
+    }
+
+    /*
+         ██████  ██     ██ ███    ██ ███████ ██████  
+        ██    ██ ██     ██ ████   ██ ██      ██   ██ 
+        ██    ██ ██  █  ██ ██ ██  ██ █████   ██████  
+        ██    ██ ██ ███ ██ ██  ██ ██ ██      ██   ██ 
+         ██████   ███ ███  ██   ████ ███████ ██   ██ 
+    */
 
     function flipPause() external onlyOwner {
         if (paused()) _unpause();
         else _pause();
     }
 
-    function onERC721Received(
-        address,
-        address from,
-        uint256,
-        bytes calldata
-    ) external pure override returns (bytes4) {
-      require(from == address(0x0), "Cannot send tokens to Barn directly");
-      return IERC721Receiver.onERC721Received.selector;
+    function withdraw() external onlyOwner {
+        payable(owner()).transfer(address(this).balance);
     }
-
 }

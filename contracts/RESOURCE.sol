@@ -4,7 +4,7 @@ pragma solidity ^0.8.4;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract GOLD is ERC20, Ownable {
+contract RESOURCE is ERC20, Ownable {
     constructor() ERC20("GOLD", "GOLD") {
         gameMasters[owner()] = true;
     }
@@ -24,7 +24,7 @@ contract GOLD is ERC20, Ownable {
         _burn(from, amount);
     }
 
-    function editGameMaster(address user, bool gm) external onlyOwner {
+    function editGameMaster(address user, bool gm) external onlyGM {
         gameMasters[user] = gm;
     }
 }

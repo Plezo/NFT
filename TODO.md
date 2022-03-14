@@ -21,7 +21,7 @@
 - ERC20
     - [x] Mint, Transfer, Burn
 - Staking contract
-    - [ ] Be able to stake and claim
+    - [x] Be able to stake and claim
 
 ### Testing
 - ERC721A
@@ -42,6 +42,7 @@
 - Staking contract
     - [ ] Owner of tokenId stake and claim
     - [ ] Staking a tokenId not owned by msg.sender
+    - [ ] Check if claim properly mints tokens
 
 ### Scripts
 - [ ] Deploy the contract
