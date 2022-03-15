@@ -1,6 +1,10 @@
 const { expect } = require("chai");
 const { ethers, waffle } = require("hardhat");
 
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 describe("Warrior", function () {
     const price = 0.08;
 
@@ -144,10 +148,60 @@ describe("Warrior", function () {
     });
 });
 
-describe("RESOURCE", function () {
+describe("Staking", function () {
+    let price = 0.08;
+    let maxPerTx = 10;
 
-});
+    let warrior;
+    let resource;
+    let land;
 
-describe("Land", function () {
+    let owner;
+    let addr1;
+    let addr2;
+    let addrs;
 
+    // `beforeEach` will run before each test, re-deploying the contract every time
+    beforeEach(async function () {
+        [owner, addr1, addr2, ...addrs] = await ethers.getSigners();
+
+        const Warrior = await ethers.getContractFactory("Warrior");
+        warrior = await Warrior.deploy();
+
+        const RESOURCE = await ethers.getContractFactory("RESOURCE");
+        resource = await RESOURCE.deploy();
+
+        const Land = await ethers.getContractFactory("Land");
+        land = await Land.deploy(warrior.address, resource.address);
+
+        await warrior.connect(owner).flipSaleState();
+        await warrior.connect(owner).setContractAddresses(land.address, resource.address);
+        await warrior.connect(owner).setLandClaimTime(0);
+        await resource.connect(owner).editGameMasters([warrior.address, land.address], [true, true]);
+    });
+
+    describe("Warriors", function () {
+        it("Should mint and stake (scouting) warrior(s)", async function () {
+            await warrior.connect(addr1).publicMint(1, true, {value: ethers.utils.parseEther(`${price}`)});
+            await warrior.connect(addr2).publicMint(1, true, {value: ethers.utils.parseEther(`${price}`)});
+
+            expect(await warrior.totalSupply()).to.equal(2);
+            expect(await warrior.balanceOf(addr1.address)).to.equal(0);
+            expect(await warrior.balanceOf(addr2.address)).to.equal(0);
+            expect(await warrior.balanceOf(warrior.address)).to.equal(2);
+            expect((await warrior.activities(0))[0]).to.equal(addr1.address);
+            expect((await warrior.activities(1))[0]).to.equal(addr2.address);
+
+            await sleep(1000); // 10 seconds
+
+            await warrior.connect(addr1).claimLand(0);
+            await warrior.connect(addr2).claimLand(1);
+
+            expect(await land.totalSupply()).to.equal(2);
+            expect(await land.balanceOf(addr1.address)).to.equal(1);
+            expect(await land.balanceOf(addr2.address)).to.equal(1);
+            expect(await warrior.balanceOf(addr1.address)).to.equal(1);
+            expect(await warrior.balanceOf(addr2.address)).to.equal(1);
+        });
+    });
 });

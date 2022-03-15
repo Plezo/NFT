@@ -14,11 +14,13 @@ contract Warrior is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
     uint256 public MAX_SUPPLY = 8888;
     uint256 public price = 0.08 ether;
     uint256 public maxPerTx = 10;
+    uint256 public landClaimTime = 1 days;
     bool public saleLive;
 
     Land land;
     RESOURCE resource;
 
+    // consider using byte array instead of enum
     enum   Actions { UNSTAKED, SCOUTING, FARMING, TRAINING }
     struct Action  {
         address owner;
@@ -75,14 +77,19 @@ contract Warrior is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
         }
     }
 
+    // currently auto unstakes, may change in future
     function claimLand(uint256 tokenId) external {
         require(activities[tokenId].owner == msg.sender, "Can't claim someone elses land!");
         require(!landClaimed[tokenId], "Land already claimed for tokenId!");
-        require(block.timestamp > activities[tokenId].timeStarted + 1 seconds, "Need to scout for 24 hours!");
+        require(block.timestamp > activities[tokenId].timeStarted + landClaimTime, "Need to scout for 24 hours!");
 
         land.mintLand(msg.sender);
         landClaimed[tokenId] = true;
+        _changeAction(msg.sender, tokenId, Actions.UNSTAKED);
     }
+
+    // wip
+    // function claimLand(uint256 tokenId, bool stakeLand, Actions warriorAction) external {}
 
     function transferFrom(
     address from,
@@ -107,7 +114,7 @@ contract Warrior is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
     }
 
     function _changeAction(address from, uint256 tokenId, Actions action) internal {
-        require(ownerOf(tokenId) == msg.sender, "Must be owner of token!");
+        require(ownerOf(tokenId) == from || activities[tokenId].owner == from, "Must be owner of token!");
         require(activities[tokenId].action != action, "Already performing that action!");
 
         activities[tokenId] = Action({
@@ -142,5 +149,9 @@ contract Warrior is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
     function setContractAddresses(address _land, address _resource) external onlyOwner {
         land = Land(_land);
         resource = RESOURCE(_resource);
+    }
+
+    function setLandClaimTime(uint256 time) external onlyOwner {
+        landClaimTime = time;
     }
 }

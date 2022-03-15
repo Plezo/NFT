@@ -17,15 +17,17 @@
 - Warrior
     - [x] Mint, Transfer, Burn, Approve
     - [x] Be able to stake for land (SCOUTING)
+    - [x] Stake (change actions) and claim land
+    - [ ] Implement training and farming staking
     - [ ] Sale state variables and get/setters
     - [ ] Have metadata (just picture for now) be visible on opensea test network
     - [ ] Figure out trait randomization and apply it to minting process
 - Resources
     - [x] Mint, Transfer, Burn
 - Land
-    - [x] Be able to stake and claim
-- ERC721A
-    - [ ] Edit 721A contract to accept staking and track how many staked
+    - [x] Be able to stake land and claim
+    - [ ] Randomly generate multipliers for farming and training depending on the rank/title trait (also random but prob externally)
+    - [ ] Be able to stake warriors and yield resource based on base multiplier and land multipliers (not sure which contract yet)
 
 ### Testing
 - ERC721A
@@ -43,10 +45,10 @@
 - ERC20
     - [ ] Have owner and GM mint/burn tokens
     - [ ] Non-owner/GM minting/burning ERC20 tokens
-- Staking contract
+- Staking contracts
     - [ ] Owner of tokenId stake and claim
     - [ ] Staking a tokenId not owned by msg.sender
-    - [ ] Check if claim properly mints tokens
+    - [x] Check if claim properly mints tokens
 
 ### Scripts
 - [ ] Deploy the contract

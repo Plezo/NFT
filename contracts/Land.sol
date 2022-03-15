@@ -14,8 +14,9 @@ import '@openzeppelin/contracts/security/Pausable.sol';
 
 contract Land is ERC721A, ERC721ABurnable, Pausable, Ownable, ReentrancyGuard {
 
-    uint256 public BASE_GOLD_RATE = 100 ether;
-    uint256 public MAX_GOLD_CIRCULATING = 1000000 ether;
+    uint256 public BASE_RESOURCE_RATE = 100 ether;
+    uint256 public MAX_RESOURCE_CIRCULATING = 1000000 ether;
+    uint256 public BASE_TIME = 1 days;
 
     Warrior warrior;
     RESOURCE resource;
@@ -96,7 +97,9 @@ contract Land is ERC721A, ERC721ABurnable, Pausable, Ownable, ReentrancyGuard {
     function _claimResource(address from, uint256 tokenId) internal {
         uint256 claimAmount = 
             (block.timestamp - land[tokenId].timeStaked)
-            * (BASE_GOLD_RATE / 1 days);
+            * (BASE_RESOURCE_RATE / BASE_TIME);
+
+        require(resource.totalSupply() + claimAmount <= MAX_RESOURCE_CIRCULATING, "Max resource supply reached!");
 
         resource.mint(from, claimAmount);
     }
@@ -131,5 +134,9 @@ contract Land is ERC721A, ERC721ABurnable, Pausable, Ownable, ReentrancyGuard {
     function setContractAddresses(address _warrior, address _resource) external onlyOwner {
         warrior = Warrior(_warrior);
         resource = RESOURCE(_resource);
+    }
+
+    function setBaseTime(uint256 time) external onlyOwner {
+        BASE_TIME = time;
     }
 }
