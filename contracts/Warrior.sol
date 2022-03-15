@@ -26,7 +26,6 @@ contract Warrior is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
         Actions action;
     }
 
-    mapping (uint256 => address) public tokenIdOwnerStaked;
     mapping (uint256 => bool) public landClaimed;
     mapping (uint256 => Action) public activities;
     
@@ -64,7 +63,6 @@ contract Warrior is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
             uint256[10] memory tokenIds; // change to max per tx
             for (uint256 i; i < amount; i++) {
                 tokenIds[i] = _currentIndex + i;
-                tokenIdOwnerStaked[_currentIndex + i] = msg.sender;
             }
 
             _safeMint(msg.sender, amount);
@@ -73,17 +71,16 @@ contract Warrior is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
                 _changeAction(msg.sender, tokenIds[i], Actions.SCOUTING);
         }
         else {
-            tokenIdOwnerStaked[_currentIndex] = msg.sender;
             _safeMint(msg.sender, amount);
         }
     }
 
     function claimLand(uint256 tokenId, Actions action) external {
-        require(tokenIdOwnerStaked[tokenId] == msg.sender, "Can't claim someone elses land!");
+        require(_ownerStaked[tokenId] == msg.sender, "Can't claim someone elses land!");
         require(!landClaimed[tokenId], "Land already claimed for tokenId!");
         require(block.timestamp > activities[tokenId].timeStarted + 1 days, "Need to scout for 24 hours!");
 
-        land.mintLand();
+        land.mintLand(msg.sender);
         landClaimed[tokenId] = true;
 
         _changeAction(msg.sender, tokenId, action);
@@ -112,11 +109,11 @@ contract Warrior is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
         });
 
         if (action == Actions.UNSTAKED)  {
-            delete tokenIdOwnerStaked[tokenId];
+            delete _ownerStaked[tokenId];
             _transfer(address(this), from, tokenId);
         }
         else if (action == Actions.SCOUTING && !landClaimed[tokenId]) {
-            tokenIdOwnerStaked[tokenId] = msg.sender;
+            _ownerStaked[tokenId] = msg.sender;
             _transfer(from, address(this), tokenId);
         }
     }

@@ -26,7 +26,6 @@ contract Land is ERC721A, ERC721ABurnable, Pausable, Ownable, ReentrancyGuard {
         uint256 timeStaked;
     }
 
-    mapping(address => bool) public isStaked;
     mapping(uint256 => Stake) public land;
 
     event TokenStaked(address owner, uint256 tokenId, uint256 timeStaked);
@@ -46,7 +45,7 @@ contract Land is ERC721A, ERC721ABurnable, Pausable, Ownable, ReentrancyGuard {
 
     function stakeLand(uint256 tokenId) external whenNotPaused {
         require(msg.sender == ownerOf(tokenId), "Cant stake someone elses token!");
-        require(!isStaked[msg.sender], "Already have a land staked!");
+        require(!(_ownerStaked[tokenId] == msg.sender), "Already have a land staked!");
 
         _stakeLand(msg.sender, tokenId);
     }
@@ -75,14 +74,14 @@ contract Land is ERC721A, ERC721ABurnable, Pausable, Ownable, ReentrancyGuard {
             timeStaked: block.timestamp
         });
 
-        isStaked[from] = true;
+        _ownerStaked[tokenId] = from;
         transferFrom(from, address(this), tokenId);
         emit TokenStaked(from, tokenId, block.timestamp);
     }
 
     function _unstake(address from, uint256 tokenId) internal {
         transferFrom(address(this), from, tokenId);
-        isStaked[from] = false;
+        delete _ownerStaked[tokenId];
         delete land[tokenId];
     }
 
@@ -106,10 +105,10 @@ contract Land is ERC721A, ERC721ABurnable, Pausable, Ownable, ReentrancyGuard {
          ██████   ███ ███  ██   ████ ███████ ██   ██ 
     */
 
-    function mintLand() external {
+    function mintLand(address to) external {
         require(msg.sender == owner() || msg.sender == address(warrior), "Not owner!");
 
-        _safeMint(msg.sender, 1);
+        _safeMint(to, 1);
     }
 
     function flipPause() external onlyOwner {
