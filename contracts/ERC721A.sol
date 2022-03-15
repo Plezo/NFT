@@ -431,7 +431,7 @@ contract ERC721A is Context, ERC165, IERC721, IERC721Metadata {
         address from,
         address to,
         uint256 tokenId
-    ) private {
+    ) internal {
         TokenOwnership memory prevOwnership = ownershipOf(tokenId);
 
         bool isApprovedOrOwner = (_msgSender() == prevOwnership.addr ||
