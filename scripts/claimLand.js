@@ -22,11 +22,6 @@ async function main() {
     let addr3;
     [owner, addr1, addr2, addr3, ...addrs] = await ethers.getSigners();
 
-    for (let i = 0; i < (await warrior.totalSupply()); i++)
-    {
-        console.log(i, (await warrior.ownerOf(i)));
-    }
-
     await warrior.connect(addr1).claimLand(0, 0);
 }
 
