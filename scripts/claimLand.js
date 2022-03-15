@@ -22,7 +22,7 @@ async function main() {
     let addr3;
     [owner, addr1, addr2, addr3, ...addrs] = await ethers.getSigners();
 
-    await warrior.connect(addr1).claimLand(0, 0);
+    await warrior.connect(addr1).claimLand(0);
 }
 
 // We recommend this pattern to be able to use async/await everywhere

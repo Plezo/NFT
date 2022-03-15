@@ -45,7 +45,7 @@ contract Land is ERC721A, ERC721ABurnable, Pausable, Ownable, ReentrancyGuard {
 
     function stakeLand(uint256 tokenId) external whenNotPaused {
         require(msg.sender == ownerOf(tokenId), "Cant stake someone elses token!");
-        require(!(_ownerStaked[tokenId] == msg.sender), "Already have a land staked!");
+        require(!(land[tokenId].owner == msg.sender), "Already have a land staked!");
 
         _stakeLand(msg.sender, tokenId);
     }
@@ -57,6 +57,16 @@ contract Land is ERC721A, ERC721ABurnable, Pausable, Ownable, ReentrancyGuard {
         _claimResource(msg.sender, tokenId);
 
         if (unstake) _unstake(msg.sender, tokenId);
+    }
+
+    function transferFrom(
+    address from,
+    address to,
+    uint256 tokenId
+    ) public virtual override {
+        if (from == address(this) && land[tokenId].owner == msg.sender)
+            _approve(to, tokenId, msg.sender);
+        _transfer(from, to, tokenId);
     }
 
     /*
@@ -74,14 +84,12 @@ contract Land is ERC721A, ERC721ABurnable, Pausable, Ownable, ReentrancyGuard {
             timeStaked: block.timestamp
         });
 
-        _ownerStaked[tokenId] = from;
-        transferFrom(from, address(this), tokenId);
+        _transfer(from, address(this), tokenId);
         emit TokenStaked(from, tokenId, block.timestamp);
     }
 
     function _unstake(address from, uint256 tokenId) internal {
         transferFrom(address(this), from, tokenId);
-        delete _ownerStaked[tokenId];
         delete land[tokenId];
     }
 

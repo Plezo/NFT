@@ -75,15 +75,23 @@ contract Warrior is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
         }
     }
 
-    function claimLand(uint256 tokenId, Actions action) external {
-        require(_ownerStaked[tokenId] == msg.sender, "Can't claim someone elses land!");
+    function claimLand(uint256 tokenId) external {
+        require(activities[tokenId].owner == msg.sender, "Can't claim someone elses land!");
         require(!landClaimed[tokenId], "Land already claimed for tokenId!");
-        require(block.timestamp > activities[tokenId].timeStarted + 1 days, "Need to scout for 24 hours!");
+        require(block.timestamp > activities[tokenId].timeStarted + 1 seconds, "Need to scout for 24 hours!");
 
         land.mintLand(msg.sender);
         landClaimed[tokenId] = true;
+    }
 
-        _changeAction(msg.sender, tokenId, action);
+    function transferFrom(
+    address from,
+    address to,
+    uint256 tokenId
+    ) public virtual override {
+        if (from == address(this) && activities[tokenId].owner == msg.sender)
+            _approve(to, tokenId, msg.sender);
+        _transfer(from, to, tokenId);
     }
 
     /*
@@ -108,12 +116,9 @@ contract Warrior is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
             action: action
         });
 
-        if (action == Actions.UNSTAKED)  {
-            delete _ownerStaked[tokenId];
-            _transfer(address(this), from, tokenId);
-        }
-        else if (action == Actions.SCOUTING && !landClaimed[tokenId]) {
-            _ownerStaked[tokenId] = msg.sender;
+        if (action == Actions.UNSTAKED) transferFrom(address(this), from, tokenId);
+        else {
+            if (action == Actions.SCOUTING) require(!landClaimed[tokenId], "Land already claimed for token!");
             _transfer(from, address(this), tokenId);
         }
     }
