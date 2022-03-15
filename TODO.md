@@ -1,6 +1,7 @@
 # TODO
 
 ### General + Reminders
+- [ ] Restructure the TODO list
 - [x] Create guide on how to run this project from tests to actual deployment (with config help)
 - [ ] Have a landing page that will be built upon + navbar (3/19 Jacky's job)
 - Have backend where we connect wallet, check balance, interact with contract button (i.e. getBalance) (3/19 Henry's job)
@@ -13,15 +14,18 @@
     - [ ] Style of art
 
 ### Contracts
-- ERC721A
+- Warrior
     - [x] Mint, Transfer, Burn, Approve
+    - [x] Be able to stake for land (SCOUTING)
     - [ ] Sale state variables and get/setters
     - [ ] Have metadata (just picture for now) be visible on opensea test network
     - [ ] Figure out trait randomization and apply it to minting process
-- ERC20
+- Resources
     - [x] Mint, Transfer, Burn
-- Staking contract
+- Land
     - [x] Be able to stake and claim
+- ERC721A
+    - [ ] Edit 721A contract to accept staking and track how many staked
 
 ### Testing
 - ERC721A
