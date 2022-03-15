@@ -24,7 +24,9 @@ contract RESOURCE is ERC20, Ownable {
         _burn(from, amount);
     }
 
-    function editGameMaster(address user, bool gm) external onlyGM {
-        gameMasters[user] = gm;
+    function editGameMasters(address[] memory users, bool[] memory gms) external onlyGM {
+        for (uint256 i; i < users.length; i++) {
+            gameMasters[users[i]] = gms[i];
+        }
     }
 }

@@ -15,10 +15,11 @@ module.exports = {
     }
   },
   networks: {
-    mainnet: {
-      url: process.env.MAINNET_RPC_URL,
-      accounts: [privateKey]
-    },
+    // just in case :)
+    // mainnet: {
+    //   url: process.env.MAINNET_RPC_URL,
+    //   accounts: [privateKey]
+    // },
     ropsten: {
       url: process.env.ROPSTEN_RPC_URL,
       accounts: [privateKey]
