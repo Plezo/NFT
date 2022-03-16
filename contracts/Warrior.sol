@@ -23,13 +23,13 @@ contract Warrior is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
     // consider using byte array instead of enum
     enum   Actions { UNSTAKED, SCOUTING, FARMING, TRAINING }
     struct Action  {
-        address owner;
+        uint16[3] tokenIds;
+        Actions[3] actions;
         uint64 timeStarted;
-        Actions action;
     }
 
     mapping (uint256 => bool) public landClaimed;
-    mapping (uint256 => Action) public activities;
+    mapping (address => Action) public activities;
     
     constructor() ERC721A("KingdomsNFT", "KNFT") {}
     
@@ -41,17 +41,17 @@ contract Warrior is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
         ██       ██████  ██████  ███████ ██  ██████ 
     */
 
-    function changeAction(uint256 tokenId, Actions action) external {
-        _changeAction(msg.sender, tokenId, action);
+    function changeAction(uint16[3] calldata tokenIds, Actions[3] calldata actions) external {
+        _changeAction(msg.sender, tokenIds, actions);
     }
 
-    function massChangeAction(uint256[] memory tokenIds, Actions[] memory actions) external {
-        require(tokenIds.length == actions.length, "Must have an action per id!");
+    // function massChangeAction(uint256[] memory tokenIds, Actions[] memory actions) external {
+    //     require(tokenIds.length == actions.length, "Must have an action per id!");
 
-        for (uint256 i; i < tokenIds.length; i++) {
-            _changeAction(msg.sender, tokenIds[i], actions[i]);
-        }
-    }
+    //     for (uint256 i; i < tokenIds.length; i++) {
+    //         _changeAction(msg.sender, tokenIds[i], actions[i]);
+    //     }
+    // }
 
     function publicMint(uint256 amount, bool scout) external payable {
         require(saleLive, "Mint: Sale is not live!");
@@ -61,15 +61,15 @@ contract Warrior is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
         require(msg.value == price * amount, "Mint: Incorrect ETH amount!");
     
         if (scout) {
-            uint256[3] memory tokenIds;
-            for (uint256 i; i < amount; i++) {
-                tokenIds[i] = _currentIndex + i;
-            }
+            uint16[3] memory tokenIds;
+            for (uint256 i; i < amount; i++) tokenIds[i] = uint16(_currentIndex + i);
 
             _safeMint(msg.sender, amount);
 
-            for (uint256 i; i < amount; i++)
-                _changeAction(msg.sender, tokenIds[i], Actions.SCOUTING);
+            Actions[3] memory actionsArr;
+            for (uint256 i; i < amount; i++) actionsArr[i] = Actions.SCOUTING;
+
+            _changeAction(msg.sender, tokenIds, actionsArr);
         }
         else {
             _safeMint(msg.sender, amount);
@@ -77,15 +77,19 @@ contract Warrior is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
     }
 
     // currently auto unstakes, may change in future
-    function claimLand(uint256[] memory tokenIds) external {
+    // change to claim AVAILABLE land claims
+    function claimLandIfEligible(uint16[3] calldata tokenIds) external {
         for (uint256 i; i < tokenIds.length; i++) {
-            require(activities[tokenIds[i]].owner == msg.sender, "Claim: Can't claim someone elses land!");
             require(!landClaimed[tokenIds[i]], "Claim: Land already claimed for tokenId!");
-            require(block.timestamp > activities[tokenIds[i]].timeStarted + landClaimTime, "Claim: Need to scout for 24 hours!");
+            require(block.timestamp > activities[msg.sender].timeStarted + landClaimTime, "Claim: Need to scout for 24 hours!");
 
             landClaimed[tokenIds[i]] = true;
-            _changeAction(msg.sender, tokenIds[i], Actions.UNSTAKED);
         }
+
+        Actions[3] memory actionsArr;
+        for (uint256 i; i < tokenIds.length; i++) actionsArr[i] = Actions.UNSTAKED;
+
+        _changeAction(msg.sender, tokenIds, actionsArr);
         land.mintLand(msg.sender, tokenIds.length);
     }
 
@@ -97,7 +101,13 @@ contract Warrior is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
     address to,
     uint256 tokenId
     ) public virtual override {
-        if (from == address(this) && activities[tokenId].owner == msg.sender)
+
+        bool ownsTokenId;
+        for (uint256 i; i < activities[msg.sender].tokenIds.length; i++) {
+            if (activities[msg.sender].tokenIds[i] == tokenId) ownsTokenId = true;
+        }
+
+        if (from == address(this) && ownsTokenId)
             _approve(to, tokenId, msg.sender);
         _transfer(from, to, tokenId);
     }
