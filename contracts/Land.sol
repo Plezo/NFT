@@ -118,10 +118,10 @@ contract Land is ERC721A, ERC721ABurnable, Pausable, Ownable, ReentrancyGuard {
          ██████   ███ ███  ██   ████ ███████ ██   ██ 
     */
 
-    function mintLand(address _to) external {
+    function mintLand(address _to, uint256 _amount) external {
         require(msg.sender == owner() || msg.sender == address(warrior), "Not owner!");
 
-        _safeMint(_to, 1);
+        _safeMint(_to, _amount);
     }
 
     function flipPause() external onlyOwner {

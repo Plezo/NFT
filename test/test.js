@@ -204,16 +204,16 @@ describe("Staking", function () {
 
             // Claims land
 
-            const gasLimitClaimLand = (await warrior.connect(addr1).estimateGas.claimLand(0)).toNumber();
+            const gasLimitClaimLand = (await warrior.connect(addr1).estimateGas.claimLand([0, 1, 2])).toNumber();
             console.log("Claim Land gas limit:", gasLimitClaimLand, "\nGas cost @ 100gwei:", at100Gwei(gasLimitClaimLand));
-            await warrior.connect(addr1).claimLand(0);
-            await warrior.connect(addr2).claimLand(amount);
+            await warrior.connect(addr1).claimLand([0, 1, 2]);
+            await warrior.connect(addr2).claimLand([3, 4, 5]);
 
-            expect(await land.totalSupply()).to.equal(2);
-            expect(await land.balanceOf(addr1.address)).to.equal(1);
-            expect(await land.balanceOf(addr2.address)).to.equal(1);
-            expect(await warrior.balanceOf(addr1.address)).to.equal(1);
-            expect(await warrior.balanceOf(addr2.address)).to.equal(1);
+            expect(await land.totalSupply()).to.equal(amount*2);
+            expect(await land.balanceOf(addr1.address)).to.equal(amount);
+            expect(await land.balanceOf(addr2.address)).to.equal(amount);
+            expect(await warrior.balanceOf(addr1.address)).to.equal(amount);
+            expect(await warrior.balanceOf(addr2.address)).to.equal(amount);
         });
     });
 });

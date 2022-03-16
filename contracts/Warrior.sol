@@ -60,7 +60,6 @@ contract Warrior is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
         require(0 < amount && amount <= maxPerTx, "Mint: Invalid amount entered!");
         require(msg.value == price * amount, "Mint: Incorrect ETH amount!");
     
-
         if (scout) {
             uint256[3] memory tokenIds;
             for (uint256 i; i < amount; i++) {
@@ -78,14 +77,16 @@ contract Warrior is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
     }
 
     // currently auto unstakes, may change in future
-    function claimLand(uint256 tokenId) external {
-        require(activities[tokenId].owner == msg.sender, "Claim: Can't claim someone elses land!");
-        require(!landClaimed[tokenId], "Claim: Land already claimed for tokenId!");
-        require(block.timestamp > activities[tokenId].timeStarted + landClaimTime, "Claim: Need to scout for 24 hours!");
+    function claimLand(uint256[] memory tokenIds) external {
+        for (uint256 i; i < tokenIds.length; i++) {
+            require(activities[tokenIds[i]].owner == msg.sender, "Claim: Can't claim someone elses land!");
+            require(!landClaimed[tokenIds[i]], "Claim: Land already claimed for tokenId!");
+            require(block.timestamp > activities[tokenIds[i]].timeStarted + landClaimTime, "Claim: Need to scout for 24 hours!");
 
-        land.mintLand(msg.sender);
-        landClaimed[tokenId] = true;
-        _changeAction(msg.sender, tokenId, Actions.UNSTAKED);
+            landClaimed[tokenIds[i]] = true;
+            _changeAction(msg.sender, tokenIds[i], Actions.UNSTAKED);
+        }
+        land.mintLand(msg.sender, tokenIds.length);
     }
 
     // wip
