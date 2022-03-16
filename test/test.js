@@ -5,6 +5,10 @@ function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+function at100Gwei(gasLimit) {
+    return ethers.utils.formatEther(ethers.utils.parseUnits("100", "gwei").mul(gasLimit));
+}
+
 describe("Warrior", function () {
     const price = 0.08;
 
@@ -32,7 +36,7 @@ describe("Warrior", function () {
 
     describe("Interactions", function () {
         it("Should successfully mint, transfer, approve, burn", async function () {
-            const amount = 5;
+            const amount = 3;
 
             const initialSupply = await nft.totalSupply();
 
@@ -116,7 +120,7 @@ describe("Warrior", function () {
 
         it("Should fail to transfer if addr2 tries transfering an nft they don't own", async function () {
             // mints the tokens for addr1;
-            await nft.connect(addr1).publicMint(5, false, {value: ethers.utils.parseEther("0.4")})
+            await nft.connect(addr1).publicMint(3, false, {value: ethers.utils.parseEther("0.24")})
 
             const initialOwnerBalance = await nft.balanceOf(addr1.address);
         
@@ -150,7 +154,7 @@ describe("Warrior", function () {
 
 describe("Staking", function () {
     let price = 0.08;
-    let maxPerTx = 10;
+    let amount = 3;
 
     let warrior;
     let resource;
@@ -181,21 +185,29 @@ describe("Staking", function () {
     });
 
     describe("Warriors", function () {
-        it("Should mint and stake (scouting) warrior(s)", async function () {
-            await warrior.connect(addr1).publicMint(1, true, {value: ethers.utils.parseEther(`${price}`)});
-            await warrior.connect(addr2).publicMint(1, true, {value: ethers.utils.parseEther(`${price}`)});
+        it("Should mint, stake (scouting) warrior(s) and claim land", async function () {
+            // Mints and stakes warriors
 
-            expect(await warrior.totalSupply()).to.equal(2);
+            const gasLimitMint = (await warrior.connect(addr1).estimateGas.publicMint(amount, true, {value: ethers.utils.parseEther(`${price*amount}`)})).toNumber()
+            console.log(`Mint ${amount} gas limit:`, gasLimitMint, "\nGas cost @ 100gwei:", at100Gwei(gasLimitMint));
+            await warrior.connect(addr1).publicMint(amount, true, {value: ethers.utils.parseEther(`${price*amount}`)});
+            await warrior.connect(addr2).publicMint(amount, true, {value: ethers.utils.parseEther(`${price*amount}`)});
+
+            expect(await warrior.totalSupply()).to.equal(amount*2);
             expect(await warrior.balanceOf(addr1.address)).to.equal(0);
             expect(await warrior.balanceOf(addr2.address)).to.equal(0);
-            expect(await warrior.balanceOf(warrior.address)).to.equal(2);
+            expect(await warrior.balanceOf(warrior.address)).to.equal(amount*2);
             expect((await warrior.activities(0))[0]).to.equal(addr1.address);
-            expect((await warrior.activities(1))[0]).to.equal(addr2.address);
+            expect((await warrior.activities(amount))[0]).to.equal(addr2.address);
 
             await sleep(1000); // 10 seconds
 
+            // Claims land
+
+            const gasLimitClaimLand = (await warrior.connect(addr1).estimateGas.claimLand(0)).toNumber();
+            console.log("Claim Land gas limit:", gasLimitClaimLand, "\nGas cost @ 100gwei:", at100Gwei(gasLimitClaimLand));
             await warrior.connect(addr1).claimLand(0);
-            await warrior.connect(addr2).claimLand(1);
+            await warrior.connect(addr2).claimLand(amount);
 
             expect(await land.totalSupply()).to.equal(2);
             expect(await land.balanceOf(addr1.address)).to.equal(1);

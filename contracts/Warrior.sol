@@ -11,10 +11,10 @@ import "@openzeppelin/contracts/utils/Counters.sol";
 
 contract Warrior is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
 
-    uint256 public MAX_SUPPLY = 8888;
-    uint256 public price = 0.08 ether;
-    uint256 public maxPerTx = 10;
-    uint256 public landClaimTime = 1 days;
+    uint16 public MAX_SUPPLY = 8888;
+    uint64 public price = 0.08 ether;
+    uint8 public maxPerTx = 3;
+    uint32 public landClaimTime = 1 days;
     bool public saleLive;
 
     Land land;
@@ -24,7 +24,7 @@ contract Warrior is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
     enum   Actions { UNSTAKED, SCOUTING, FARMING, TRAINING }
     struct Action  {
         address owner;
-        uint256 timeStarted;
+        uint64 timeStarted;
         Actions action;
     }
 
@@ -54,15 +54,15 @@ contract Warrior is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
     }
 
     function publicMint(uint256 amount, bool scout) external payable {
-        require(saleLive, "Sale is not live!");
-        require(tx.origin ==  msg.sender, "No contract mints!");
-        require(this.totalSupply() + amount <= MAX_SUPPLY, "Max supply reached!");
-        require(0 < amount && amount <= maxPerTx, "Invalid amount entered!");
-        require(msg.value == price * amount, "Incorrect ETH amount!");
+        require(saleLive, "Mint: Sale is not live!");
+        require(tx.origin ==  msg.sender, "Mint: No contract mints!");
+        require(this.totalSupply() + amount <= MAX_SUPPLY, "Mint: Max supply reached!");
+        require(0 < amount && amount <= maxPerTx, "Mint: Invalid amount entered!");
+        require(msg.value == price * amount, "Mint: Incorrect ETH amount!");
     
 
         if (scout) {
-            uint256[10] memory tokenIds; // change to max per tx
+            uint256[3] memory tokenIds;
             for (uint256 i; i < amount; i++) {
                 tokenIds[i] = _currentIndex + i;
             }
@@ -79,9 +79,9 @@ contract Warrior is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
 
     // currently auto unstakes, may change in future
     function claimLand(uint256 tokenId) external {
-        require(activities[tokenId].owner == msg.sender, "Can't claim someone elses land!");
-        require(!landClaimed[tokenId], "Land already claimed for tokenId!");
-        require(block.timestamp > activities[tokenId].timeStarted + landClaimTime, "Need to scout for 24 hours!");
+        require(activities[tokenId].owner == msg.sender, "Claim: Can't claim someone elses land!");
+        require(!landClaimed[tokenId], "Claim: Land already claimed for tokenId!");
+        require(block.timestamp > activities[tokenId].timeStarted + landClaimTime, "Claim: Need to scout for 24 hours!");
 
         land.mintLand(msg.sender);
         landClaimed[tokenId] = true;
@@ -119,7 +119,7 @@ contract Warrior is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
 
         activities[tokenId] = Action({
             owner: from,
-            timeStarted: block.timestamp,
+            timeStarted: uint64(block.timestamp),
             action: action
         });
 
@@ -151,7 +151,7 @@ contract Warrior is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
         resource = RESOURCE(_resource);
     }
 
-    function setLandClaimTime(uint256 time) external onlyOwner {
-        landClaimTime = time;
+    function setLandClaimTime(uint32 _time) external onlyOwner {
+        landClaimTime = _time;
     }
 }
