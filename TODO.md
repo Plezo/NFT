@@ -2,6 +2,7 @@
 
 ### General + Reminders
 - [ ] Restructure the TODO list
+- [ ] Properly document each function and keep consistent convention
 - [x] Create guide on how to run this project from tests to actual deployment (with config help)
 - [ ] Have a landing page that will be built upon + navbar (3/19 Jacky's job)
 - Have backend where we connect wallet, check balance, interact with contract button (i.e. getBalance) (3/19 Henry's job)

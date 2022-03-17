@@ -28,8 +28,15 @@ contract Warrior is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
         Actions action;
     }
 
+    struct WarriorStats {
+        uint64 trainingEXP;
+        uint64 farmingEXP;
+        uint128 collectedRESOURCE;
+    }
+
     mapping (uint256 => bool) public landClaimed;
     mapping (uint256 => Action) public activities;
+    mapping (uint256 => WarriorStats) public stats;
     
     constructor() ERC721A("KingdomsNFT", "KNFT") {}
     
@@ -75,9 +82,8 @@ contract Warrior is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
         }
     }
 
-    // currently auto unstakes, may change in future
-    // change to claim AVAILABLE land claims
-    function claimLandIfEligible(uint16[3] calldata tokenIds) external {
+    function claimLandIfEligible(uint16[3] calldata tokenIds)
+        external {
         uint8 numEligible;
         for (uint256 i; i < tokenIds.length; i++) {
             require(activities[tokenIds[i]].owner == msg.sender, "Claim: Can't claim someone elses land!");
@@ -90,12 +96,8 @@ contract Warrior is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
                 landClaimed[tokenIds[i]] = true;
             }
         }
-        
         land.mintLand(msg.sender, numEligible);
     }
-
-    // wip
-    // function claimLand(uint256 tokenId, bool stakeLand, Actions warriorAction) external {}
 
     function transferFrom(
     address from,
