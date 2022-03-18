@@ -117,7 +117,6 @@ contract Land is ERC721A, ERC721ABurnable, Pausable, Ownable, ReentrancyGuard {
         delete land[_from];
     }
 
-    // WIP! Need to check # of warriors staked for training or farming, then deliver proper rewards
     function _claim(address _from) internal {
 
         uint16[3] memory expArr;
@@ -125,6 +124,8 @@ contract Land is ERC721A, ERC721ABurnable, Pausable, Ownable, ReentrancyGuard {
 
         for (uint i; i < land[_from].warriorTokenIds.length; i++) {
             if (land[_from].actions[i] == Actions.FARMING) {
+
+                // 2 is FARMING
                 actionToUint[i] = 2;
                 // idk how rewards and exp will be calculated
                 uint256 claimAmount = 
@@ -139,6 +140,7 @@ contract Land is ERC721A, ERC721ABurnable, Pausable, Ownable, ReentrancyGuard {
             }
 
             else if (land[_from].actions[i] == Actions.TRAINING) {
+                // 3 is TRAINING
                 actionToUint[i] = 3;
                 // idk how exp will be calculated
                 expArr[i] = uint16((block.timestamp - land[_from].timeStaked) * (BASE_TRAINING_EXP / BASE_TIME));

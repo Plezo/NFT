@@ -20,7 +20,9 @@ contract Warrior is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
     Land land;
     RESOURCE resource;
 
-    // consider using byte array instead of enum
+    //
+    uint8[4] public rankingsMaxLevel = [20, 40, 60, 80];
+
     enum Actions { UNSTAKED, SCOUTING, FARMING, TRAINING }
     struct Action  {
         address owner;
@@ -33,6 +35,7 @@ contract Warrior is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
         uint16 farmingLVL;
         uint16 trainingEXP;
         uint16 farmingEXP;
+        uint8 ranking;
         uint128 collectedRESOURCE;
     }
 
@@ -85,27 +88,28 @@ contract Warrior is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
         }
     }
 
-    // wip, exp keeps increasing but never checks for threshold for levelling up
     // for now the levels are 0xp, 100xp, 200xp, 300xp, per level so y=100x (make a graph for visualizing when tryna find the right one)
-    // wip, cap the level depending on the warrior's ranking
     function addEXP(uint16[3] memory warriorTokenIds, uint8[3] memory actions, uint16[3] memory expArr) external {
         require(msg.sender == owner() || msg.sender == address(land), "EXP: Caller must be land contract");
 
         for (uint256 i; i < warriorTokenIds.length; i++) {
-            if (actions[i] == 2)  {
-                if (stats[warriorTokenIds[i]].farmingEXP + expArr[i] >= stats[warriorTokenIds[i]].farmingLVL*100) {
-                    stats[warriorTokenIds[i]].farmingEXP = (stats[warriorTokenIds[i]].farmingEXP + expArr[i]) - stats[warriorTokenIds[i]].farmingLVL*100;
-                    stats[warriorTokenIds[i]].farmingLVL++;
-                }
-                else stats[warriorTokenIds[i]].farmingEXP += expArr[i];
-            }
-            else if (actions[i] == 3) {
-                if (stats[warriorTokenIds[i]].trainingEXP + expArr[i] >= stats[warriorTokenIds[i]].trainingLVL*100) {
-                    stats[warriorTokenIds[i]].trainingEXP = (stats[warriorTokenIds[i]].trainingEXP + expArr[i]) - stats[warriorTokenIds[i]].trainingLVL*100;
-                    stats[warriorTokenIds[i]].trainingLVL++;
-                }
-                else stats[warriorTokenIds[i]].trainingEXP += expArr[i];
-            }
+            WarriorStats memory warriorStats = stats[warriorTokenIds[i]];
+
+            (stats[warriorTokenIds[i]].farmingEXP, stats[warriorTokenIds[i]].farmingLVL ) = 
+                    _calculateEXPandLVL(actions[i], 
+                        actions[i] == 2 ? warriorStats.farmingEXP : warriorStats.trainingEXP, 
+                        actions[i] == 2 ? warriorStats.farmingLVL : warriorStats.trainingLVL,
+                        expArr[i],
+                        rankingsMaxLevel[warriorStats.ranking]);
+
+            // if (actions[i] == 2 && warriorStats.farmingLVL < rankingsMaxLevel[warriorStats.ranking])  {
+            //     (stats[warriorStats.farmingEXP, warriorStats.farmingLVL ) = 
+            //         _calculateEXPandLVL(Actions.FARMING, warriorStats.farmingEXP, warriorStats.farmingLVL, expArr[i]);
+            // }
+            // else if (actions[i] == 3 && stats[warriorTokenIds[i]].trainingLVL < rankingsMaxLevel[stats[warriorTokenIds[i]].ranking]) {
+            //     (stats[warriorStats.trainingEXP, warriorStats.trainingLVL ) = 
+            //         _calculateEXPandLVL(Actions.TRAINING, warriorStats.trainingEXP, warriorStats.trainingLVL, expArr[i]);
+            // }
         }
     }
 
@@ -162,6 +166,20 @@ contract Warrior is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
             if (action == Actions.SCOUTING) require(!landClaimed[tokenId], "Internal: Land already claimed for token!");
             _transfer(from, address(this), tokenId);
         }
+    }
+
+    function _calculateEXPandLVL(uint8 _action, uint16 _exp, uint16 _lvl, uint16 _maxLVL, uint16 _expAdding) internal pure returns(uint16, uint16) {
+
+        // *100 for farming, *200 for training
+        uint16 multiplier = _action == 2 ? 100 : 200;
+
+        uint16 newEXP = _exp+_expAdding;
+        while (newEXP >= _lvl*multiplier && _lvl < _maxLVL) {
+            newEXP -= _lvl*multiplier;
+            _lvl++;
+        }
+
+        return (newEXP, _lvl);
     }
 
     /*
