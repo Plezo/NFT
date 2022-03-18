@@ -21,7 +21,7 @@ contract Warrior is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
     RESOURCE resource;
 
     // consider using byte array instead of enum
-    enum   Actions { UNSTAKED, SCOUTING, FARMING, TRAINING }
+    enum Actions { UNSTAKED, SCOUTING, FARMING, TRAINING }
     struct Action  {
         address owner;
         uint64 timeStarted;
@@ -29,8 +29,10 @@ contract Warrior is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
     }
 
     struct WarriorStats {
-        uint64 trainingEXP;
-        uint64 farmingEXP;
+        uint16 trainingLVL;
+        uint16 farmingLVL;
+        uint16 trainingEXP;
+        uint16 farmingEXP;
         uint128 collectedRESOURCE;
     }
 
@@ -82,12 +84,27 @@ contract Warrior is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
         }
     }
 
-    function addEXP(address _from, uint16[3] memory warriorTokenIds, Actions[3] memory actions, uint256[3] memory expArr) external {
+    // wip, exp keeps increasing but never checks for threshold for levelling up
+    // for now the levels are 0xp, 100xp, 200xp, 300xp, per level so y=100x (make a graph for visualizing when tryna find the right one)
+    // wip, cap the level depending on the warrior's ranking
+    function addEXP(uint16[3] memory warriorTokenIds, uint8[3] memory actions, uint16[3] memory expArr) external {
         require(msg.sender == owner() || msg.sender == address(land), "EXP: Caller must be land contract");
 
         for (uint256 i; i < warriorTokenIds.length; i++) {
-            if (actions[i] == Actions.FARMING) stats[warriorTokenIds[i]].farmingEXP += expArr[i];
-            else if (actions[i] == Actions.TRAINING) stats[warriorTokenIds[i]].trainingEXP += expArr[i];
+            if (actions[i] == 2)  {
+                if (stats[warriorTokenIds[i]].farmingEXP + expArr[i] >= stats[warriorTokenIds[i]].farmingLVL*100) {
+                    stats[warriorTokenIds[i]].farmingEXP = (stats[warriorTokenIds[i]].farmingEXP + expArr[i]) - stats[warriorTokenIds[i]].farmingLVL*100;
+                    stats[warriorTokenIds[i]].farmingLVL++;
+                }
+                else stats[warriorTokenIds[i]].farmingEXP += expArr[i];
+            }
+            else if (actions[i] == 3) {
+                if (stats[warriorTokenIds[i]].trainingEXP + expArr[i] >= stats[warriorTokenIds[i]].trainingLVL*100) {
+                    stats[warriorTokenIds[i]].trainingEXP = (stats[warriorTokenIds[i]].trainingEXP + expArr[i]) - stats[warriorTokenIds[i]].trainingLVL*100;
+                    stats[warriorTokenIds[i]].trainingLVL++;
+                }
+                else stats[warriorTokenIds[i]].trainingEXP += expArr[i];
+            }
         }
     }
 

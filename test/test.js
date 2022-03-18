@@ -9,6 +9,8 @@ function at100Gwei(gasLimit) {
     return ethers.utils.formatEther(ethers.utils.parseUnits("100", "gwei").mul(gasLimit));
 }
 
+// dont forget to mint token #0 for owner
+
 describe("Warrior", function () {
     const price = 0.08;
 

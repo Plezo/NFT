@@ -120,34 +120,32 @@ contract Land is ERC721A, ERC721ABurnable, Pausable, Ownable, ReentrancyGuard {
     // WIP! Need to check # of warriors staked for training or farming, then deliver proper rewards
     function _claim(address _from) internal {
 
-        uint256[3] expArr;
+        uint16[3] memory expArr;
+        uint8[3] memory actionToUint;
 
         for (uint i; i < land[_from].warriorTokenIds.length; i++) {
             if (land[_from].actions[i] == Actions.FARMING) {
-
+                actionToUint[i] = 2;
                 // idk how rewards and exp will be calculated
                 uint256 claimAmount = 
                     (block.timestamp - land[_from].timeStaked)
                     * (BASE_RESOURCE_RATE / BASE_TIME)
                     * stats[land[_from].landTokenId].farmingMultiplier;
 
-                expArr[i] = 
-                    (block.timestamp - land[_from].timeStaked)
-                    * (BASE_FARMING_EXP / BASE_TIME);
+                expArr[i] = uint16((block.timestamp - land[_from].timeStaked) * (BASE_FARMING_EXP / BASE_TIME));
 
                 if (resource.totalSupply() + claimAmount <= MAX_RESOURCE_CIRCULATING)
                     resource.mint(_from, claimAmount);
             }
 
             else if (land[_from].actions[i] == Actions.TRAINING) {
+                actionToUint[i] = 3;
                 // idk how exp will be calculated
-                expArr[i] = 
-                    (block.timestamp - land[_from].timeStaked)
-                    * (BASE_TRAINING_EXP / BASE_TIME);
+                expArr[i] = uint16((block.timestamp - land[_from].timeStaked) * (BASE_TRAINING_EXP / BASE_TIME));
             }
         }
 
-        warrior.addEXP(_from, land[_from].warriorTokenIds, land[_from].actions, expArr);     
+        warrior.addEXP(land[_from].warriorTokenIds, actionToUint, expArr);     
     }
 
     function _baseURI() internal pure override returns (string memory) {
