@@ -62,6 +62,7 @@ contract Warrior is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
         }
     }
 
+    // wip generate random rankings per
     function publicMint(uint256 amount, bool scout) external payable {
         require(saleLive, "Mint: Sale is not live!");
         require(tx.origin ==  msg.sender, "Mint: No contract mints!");

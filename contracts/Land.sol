@@ -160,7 +160,9 @@ contract Land is ERC721A, ERC721ABurnable, Pausable, Ownable, ReentrancyGuard {
          ██████   ███ ███  ██   ████ ███████ ██   ██ 
     */
 
+    // wip, generate random multipliers
     function mintLand(address _to, uint256 _amount) external {
+        require(totalSupply() + _amount <= warrior.MAX_SUPPLY(), "Exceeds supply!");
         require(msg.sender == owner() || msg.sender == address(warrior), "Not owner!");
         _safeMint(_to, _amount);
     }
