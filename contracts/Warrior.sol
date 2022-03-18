@@ -82,8 +82,16 @@ contract Warrior is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
         }
     }
 
-    function claimLandIfEligible(uint16[3] calldata tokenIds)
-        external {
+    function addEXP(address _from, uint16[3] memory warriorTokenIds, Actions[3] memory actions, uint256[3] memory expArr) external {
+        require(msg.sender == owner() || msg.sender == address(land), "EXP: Caller must be land contract");
+
+        for (uint256 i; i < warriorTokenIds.length; i++) {
+            if (actions[i] == Actions.FARMING) stats[warriorTokenIds[i]].farmingEXP += expArr[i];
+            else if (actions[i] == Actions.TRAINING) stats[warriorTokenIds[i]].trainingEXP += expArr[i];
+        }
+    }
+
+    function claimLandIfEligible(uint16[3] calldata tokenIds) external {
         uint8 numEligible;
         for (uint256 i; i < tokenIds.length; i++) {
             require(activities[tokenIds[i]].owner == msg.sender, "Claim: Can't claim someone elses land!");
@@ -122,8 +130,8 @@ contract Warrior is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
     }
 
     function _changeAction(address from, uint256 tokenId, Actions action) internal {
-        require(ownerOf(tokenId) == from || activities[tokenId].owner == from, "Must be owner of token!");
-        require(activities[tokenId].action != action, "Already performing that action!");
+        require(ownerOf(tokenId) == from || activities[tokenId].owner == from, "Internal: Must be owner of token!");
+        require(activities[tokenId].action != action, "Internal: Already performing that action!");
 
         activities[tokenId] = Action({
             owner: from,
@@ -133,7 +141,7 @@ contract Warrior is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
 
         if (action == Actions.UNSTAKED) transferFrom(address(this), from, tokenId);
         else {
-            if (action == Actions.SCOUTING) require(!landClaimed[tokenId], "Land already claimed for token!");
+            if (action == Actions.SCOUTING) require(!landClaimed[tokenId], "Internal: Land already claimed for token!");
             _transfer(from, address(this), tokenId);
         }
     }
