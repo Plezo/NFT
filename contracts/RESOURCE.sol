@@ -16,7 +16,7 @@ contract RESOURCE is ERC20, Ownable {
         _;
     }
 
-    function mint(address to, uint256 amount) public onlyGM {
+    function mint(address to, uint256 amount) external onlyGM {
         _mint(to, amount);
     }
 

@@ -17,7 +17,7 @@ contract Warrior is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
     uint32 public landClaimTime = 1 days;
     bool public saleLive;
 
-    Land land;
+    Land landContract;
     RESOURCE resource;
 
     //
@@ -27,7 +27,7 @@ contract Warrior is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
     struct Action  {
         address owner;
         uint64 timeStarted;
-        Actions action;
+        uint8 action;
     }
 
     struct WarriorStats {
@@ -36,7 +36,6 @@ contract Warrior is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
         uint16 trainingEXP;
         uint16 farmingEXP;
         uint8 ranking;
-        uint128 collectedRESOURCE;
     }
 
     mapping (uint256 => bool) public landClaimed;
@@ -53,16 +52,9 @@ contract Warrior is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
         ██       ██████  ██████  ███████ ██  ██████ 
     */
 
-    function changeAction(uint16 tokenId, Actions action) external {
-        _changeAction(msg.sender, tokenId, action);
-    }
-
-    function massChangeAction(uint256[] calldata tokenIds, Actions[] calldata actions) external {
-        require(tokenIds.length == actions.length, "Must have an action per id!");
-
-        for (uint256 i; i < tokenIds.length; i++) {
-            _changeAction(msg.sender, tokenIds[i], actions[i]);
-        }
+    // if not staking land, just use any number
+    function changeActions(address _from, uint16[3] calldata _tokenIds, uint8[3] calldata _actions, uint16 _landTokenId) external {
+        _changeActions(_from, _tokenIds, _actions, _landTokenId);
     }
 
     // wip generate random rankings per
@@ -75,13 +67,13 @@ contract Warrior is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
     
         if (scout) {
             uint16[3] memory tokenIds;
+
             for (uint256 i; i < amount; i++)
                 tokenIds[i] = uint16(_currentIndex + i);
 
             _safeMint(msg.sender, amount);
-
-            for (uint256 i; i < amount; i++)
-                _changeAction(msg.sender, tokenIds[i], Actions.SCOUTING);
+            
+            _changeActions(msg.sender, tokenIds, [1, 1, 1], 0);
         }
         else {
             _safeMint(msg.sender, amount);
@@ -90,7 +82,7 @@ contract Warrior is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
 
     // for now the levels are 0xp, 100xp, 200xp, 300xp, per level so y=100x (make a graph for visualizing when tryna find the right one)
     function addEXP(uint16[3] memory warriorTokenIds, uint8[3] memory actions, uint16[3] memory expArr) external {
-        require(msg.sender == owner() || msg.sender == address(land), "EXP: Caller must be land contract");
+        require(msg.sender == owner() || msg.sender == address(landContract), "EXP: Caller must be landContract contract");
 
         for (uint256 i; i < warriorTokenIds.length; i++) {
             WarriorStats memory warriorStats = stats[warriorTokenIds[i]];
@@ -113,30 +105,20 @@ contract Warrior is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
         }
     }
 
-    function claimLandIfEligible(uint16[3] calldata tokenIds) external {
+    function claimLandIfEligible(uint16[3] calldata _tokenIds) external {
         uint8 numEligible;
-        for (uint256 i; i < tokenIds.length; i++) {
-            require(activities[tokenIds[i]].owner == msg.sender, "Claim: Can't claim someone elses land!");
-            require(!landClaimed[tokenIds[i]], "Claim: Land already claimed for tokenId!");
+        for (uint256 i; i < _tokenIds.length; i++) {
+            require(activities[_tokenIds[i]].owner == msg.sender, "Claim: Can't claim someone elses landContract!");
+            require(!landClaimed[_tokenIds[i]], "Claim: landContract already claimed for tokenId!");
 
             // Must be staked for landClaimTime amount of timw
-            if (block.timestamp > activities[tokenIds[i]].timeStarted + landClaimTime) {
+            if (block.timestamp > activities[_tokenIds[i]].timeStarted + landClaimTime) {
                 numEligible++;
-                _changeAction(msg.sender, tokenIds[i], Actions.UNSTAKED);
-                landClaimed[tokenIds[i]] = true;
+                landClaimed[_tokenIds[i]] = true;
             }
         }
-        land.mintLand(msg.sender, numEligible);
-    }
-
-    function transferFrom(
-    address from,
-    address to,
-    uint256 tokenId
-    ) public virtual override {
-        if (from == address(this) && activities[tokenId].owner == msg.sender)
-            _approve(to, tokenId, msg.sender);
-        _transfer(from, to, tokenId);
+        _changeActions(msg.sender, _tokenIds, [0, 0, 0], 0);
+        landContract.mintLand(msg.sender, numEligible);
     }
 
     /*
@@ -151,20 +133,50 @@ contract Warrior is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
         return "ipfs://";
     }
 
-    function _changeAction(address from, uint256 tokenId, Actions action) internal {
-        require(ownerOf(tokenId) == from || activities[tokenId].owner == from, "Internal: Must be owner of token!");
-        require(activities[tokenId].action != action, "Internal: Already performing that action!");
+    function _changeActions(address _from, uint16[3] memory _warriorTokenIds, uint8[3] memory _actions, uint16 landTokenId) internal {
+        bool stakeLand;
+        for (uint256 i; i < _warriorTokenIds.length; i++) {
+            require(ownerOf(_warriorTokenIds[i]) == _from || 
+                activities[_warriorTokenIds[i]].owner == _from &&
+                (msg.sender == address(landContract) || msg.sender == _from),
+                 "ChangeAction: Must be owner of token!");
+            require(activities[_warriorTokenIds[i]].action != _actions[i], "ChangeAction: Already performing that action!");
 
-        activities[tokenId] = Action({
-            owner: from,
-            timeStarted: uint64(block.timestamp),
-            action: action
-        });
+            activities[_warriorTokenIds[i]] = Action({
+                owner: _from,
+                timeStarted: uint64(block.timestamp),
+                action: _actions[i]
+            });
 
-        if (action == Actions.UNSTAKED) transferFrom(address(this), from, tokenId);
-        else {
-            if (action == Actions.SCOUTING) require(!landClaimed[tokenId], "Internal: Land already claimed for token!");
-            _transfer(from, address(this), tokenId);
+            // check for security flaws
+            // IF UNSTAKED
+            if (_actions[i] == 0) {
+                _approve(msg.sender, _warriorTokenIds[i], _from);
+                _transfer(address(this), _from, _warriorTokenIds[i]);
+            }
+            // IF SCOUTING
+            else if (_actions[i] == 1) {
+                require(!landClaimed[_warriorTokenIds[i]], "ChangeAction: landContract already claimed for token!");
+                _transfer(_from, address(this), _warriorTokenIds[i]);
+            }
+            else stakeLand = true;
+        }
+
+        if (stakeLand) {
+            require(
+                0 < _warriorTokenIds.length &&
+                _warriorTokenIds.length <= 3 &&
+                _warriorTokenIds.length == _actions.length,
+                "ChangeAction: Invalid # of actions/warriors");
+                for (uint256 i; i < _warriorTokenIds.length; i++) {
+                    require(_from == ownerOf(_warriorTokenIds[i]) || _from == activities[_warriorTokenIds[i]].owner, "ChangeAction: Cant stake someone elses token!");
+                    require(_actions[i] == 2 || _actions[i] == 3, "ChangeAction: Action(s) must be farming or training to stake to landContract");
+                }
+                landContract.stakeLand(_from, landTokenId, _warriorTokenIds, _actions);
+                for (uint256 i; i < _warriorTokenIds.length; i++) {
+                    _approve(msg.sender, _warriorTokenIds[i], _from);
+                    _transfer(_from, address(this), _warriorTokenIds[i]);
+                }
         }
     }
 
@@ -190,6 +202,19 @@ contract Warrior is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
          ██████   ███ ███  ██   ████ ███████ ██   ██ 
     */
 
+    function ownerMint(bool scout) external onlyOwner {
+        require(this.totalSupply() + 1 <= MAX_SUPPLY, "Mint: Max supply reached!");
+
+        uint16[3] memory tokenIds; 
+        tokenIds[0] = uint16(_currentIndex);
+    
+        if (scout) {
+            _safeMint(msg.sender, 1);
+            _changeActions(msg.sender, tokenIds, [1, 1, 1], 0);
+        }
+        else _safeMint(msg.sender, 1);
+    }
+
     function flipSaleState() external onlyOwner {
         saleLive = !saleLive;
     }
@@ -199,7 +224,7 @@ contract Warrior is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
     }
 
     function setContractAddresses(address _land, address _resource) external onlyOwner {
-        land = Land(_land);
+        landContract = Land(_land);
         resource = RESOURCE(_resource);
     }
 
