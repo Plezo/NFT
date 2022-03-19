@@ -26,8 +26,10 @@ contract Land is ERC721A, ERC721ABurnable, Pausable, Ownable, ReentrancyGuard {
     enum   Actions { UNSTAKED, SCOUTING, FARMING, TRAINING }
 
     struct LandStats {
-        uint128 farmingMultiplier;
-        uint128 trainingMultiplier;
+        uint8 farmingMultiplierNumerator;
+        uint8 farmingMultiplierDenominator;
+        uint8 trainingMultiplierNumerator;
+        uint8 trainingMultiplierDenominator;
     }
 
     struct Stake {
@@ -123,20 +125,23 @@ contract Land is ERC721A, ERC721ABurnable, Pausable, Ownable, ReentrancyGuard {
         uint256 claimAmount;
         uint8 numFarming;
 
-        for (uint i; i < land[_from].warriorTokenIds.length; i++) {
+        for (uint256 i; i < land[_from].warriorTokenIds.length; i++) {
             if (land[_from].actions[i] == 2) {
                 // 2 is FARMING
                 actionToUint[i] = 2;
                 // idk how rewards and exp will be calculated
                 claimAmount += 
-                    (block.timestamp - land[_from].timeStaked)
-                    * (BASE_RESOURCE_RATE / BASE_TIME)
-                    * stats[land[_from].landTokenId].farmingMultiplier;
+                    ((block.timestamp - land[_from].timeStaked)
+                    * BASE_RESOURCE_RATE)
+                    / BASE_TIME;
 
                 // more you stake for farming, less you generate by 20% per
                 claimAmount -= (claimAmount * numFarming)/5;
 
-                expArr[i] = uint16((block.timestamp - land[_from].timeStaked) * (BASE_FARMING_EXP / BASE_TIME));
+                expArr[i] = uint16(((block.timestamp - land[_from].timeStaked)
+                * (BASE_FARMING_EXP / BASE_TIME) 
+                * stats[land[_from].landTokenId].farmingMultiplierNumerator)
+                / stats[land[_from].landTokenId].farmingMultiplierDenominator);
                 numFarming++;
             }
 
@@ -144,7 +149,11 @@ contract Land is ERC721A, ERC721ABurnable, Pausable, Ownable, ReentrancyGuard {
                 // 3 is TRAINING
                 actionToUint[i] = 3;
                 // idk how exp will be calculated
-                expArr[i] = uint16(((block.timestamp - land[_from].timeStaked) * (BASE_TRAINING_EXP / BASE_TIME)));
+                expArr[i] = uint16(((
+                    block.timestamp - land[_from].timeStaked)
+                    * (BASE_TRAINING_EXP / BASE_TIME))
+                    * stats[land[_from].landTokenId].trainingMultiplierNumerator)
+                    / stats[land[_from].landTokenId].trainingMultiplierDenominator;
             }
         }
         if (claimAmount > 0 && resource.totalSupply() + claimAmount <= MAX_RESOURCE_CIRCULATING)
@@ -170,6 +179,11 @@ contract Land is ERC721A, ERC721ABurnable, Pausable, Ownable, ReentrancyGuard {
         require(totalSupply() + _amount <= warrior.MAX_SUPPLY(), "Exceeds supply!");
         require(msg.sender == owner() || msg.sender == address(warrior), "Not owner!");
         _safeMint(_to, _amount);
+
+        stats[_currentIndex ].farmingMultiplierNumerator = 1;
+        stats[_currentIndex ].farmingMultiplierDenominator = 1;
+        stats[_currentIndex ].trainingMultiplierNumerator = 1;
+        stats[_currentIndex ].trainingMultiplierDenominator = 1;
     }
 
     function flipPause() external onlyOwner {

@@ -19,8 +19,7 @@ contract Warrior is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
 
     Land landContract;
     RESOURCE resource;
-
-    //
+    
     uint8[4] public rankingsMaxLevel = [20, 40, 60, 80];
 
     enum Actions { UNSTAKED, SCOUTING, FARMING, TRAINING }
