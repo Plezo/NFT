@@ -1,9 +1,9 @@
-const { ethers } = require("hardhat");
+const hre = require("hardhat");
 
 async function main() {
 
     let owner;
-    [owner, ...addrs] = await ethers.getSigners();
+    [owner, ...addrs] = await hre.ethers.getSigners();
 
     // Deploy Warrior
     const Warrior = await hre.ethers.getContractFactory("Warrior");
