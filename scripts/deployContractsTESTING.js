@@ -1,26 +1,27 @@
-const hre = require("hardhat");
+const { ethers } = require("hardhat");
 
 async function main() {
 
+    let warrior;
+    let resource;
+    let land;
+
     let owner;
-    [owner, ...addrs] = await hre.ethers.getSigners();
+    [owner, ...addrs] = await ethers.getSigners();
 
     // Deploy Warrior
-    const Warrior = await hre.ethers.getContractFactory("Warrior");
-    const warrior = await Warrior.deploy();
-    await warrior.deployed();
+    const Warrior = await ethers.getContractFactory("Warrior");
+    warrior = await Warrior.deploy();
     console.log("Warrior deployed to:", warrior.address);
 
     // Deploy $RESOURCE
-    const RESOURCE = await hre.ethers.getContractFactory("RESOURCE");
-    const resource = await RESOURCE.deploy();
-    await resource.deployed();
+    const RESOURCE = await ethers.getContractFactory("RESOURCE");
+    resource = await RESOURCE.deploy();
     console.log("Resource deployed to:", resource.address);
 
     // Deploy Land
-    const Land = await hre.ethers.getContractFactory("Land");
-    const land = await Land.deploy(warrior.address, resource.address);
-    await land.deployed();
+    const Land = await ethers.getContractFactory("Land");
+    land = await Land.deploy(warrior.address, resource.address);
     console.log("Land deployed to:", land.address);
 
     // Enable sale
