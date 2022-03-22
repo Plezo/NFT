@@ -412,7 +412,7 @@ contract ERC721A is Context, ERC165, IERC721, IERC721Metadata {
      * Requirements:
      *
      * - `to` cannot be the zero address.
-     * - `tokenId` token must be owned by `from`.
+     * - `tokenId`  must be owned by `from`.
      *
      * Emits a {Transfer} event.
      */

@@ -19,7 +19,10 @@ contract Warrior is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
 
     Land landContract;
     RESOURCE resource;
+
+    string public baseURI = "";
     
+    // generate more
     uint8[4] public rankingsMaxLevel = [20, 40, 60, 80];
 
     // enum Actions { UNSTAKED, SCOUTING, FARMING, TRAINING }
@@ -29,18 +32,14 @@ contract Warrior is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
     //     uint8 action;
     // }
 
+    // higher ranking => better armor, weapon and headpiece
+    // gender, accessory(1,2 10%,3 5%) [face accessory, idk, somethin crazy], weapon, background, hair, eyes, mouth, headpiece, armor
     struct WarriorStats {
-        uint8 head;
-        uint8 face;
-        uint8 accessory;
-        uint8 weapon;
-        uint8 overall;
-        uint8 background;
+        uint8 ranking;
         uint8 trainingLVL;  // 255
         uint8 farmingLVL;   // 255
         uint16 trainingEXP; // 65000
         uint16 farmingEXP;  // 65000
-        uint8 ranking;      // 255
     }
 
     // mapping (uint256 => bool) public landClaimed;
@@ -48,7 +47,9 @@ contract Warrior is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
     mapping (uint256 => WarriorStats) public stats;
     mapping (address => uint256) public numMinted;
     
-    constructor() ERC721A("Warrior", "WARRIOR") {}
+    constructor(string memory _baseuri) ERC721A("Warrior", "WARRIOR") {
+        baseURI = _baseuri;
+    }
     
     /*
         ██████  ██    ██ ██████  ██      ██  ██████ 
@@ -73,11 +74,9 @@ contract Warrior is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
             require(msg.value == price * amount,                     "Mint: Incorrect ETH amount!");
         }
 
-        uint256 seed = _generateSeed();
         uint256 firstTokenId = _currentIndex;
         for (uint256 i; i < amount; i++) {
-            _createWarrior(seed, firstTokenId+i);
-            seed = _randomize(seed, firstTokenId+i);
+            _generateRanking(firstTokenId+i);
         }
         numMinted[msg.sender] += amount;
         _safeMint(msg.sender, amount);
@@ -139,32 +138,26 @@ contract Warrior is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
     */
 
     function _baseURI() internal pure override returns (string memory) {
-        return "ipfs://";
+        return baseURI;
     }
 
-    function _createWarrior(uint256 seed, uint256 tokenId) internal {
-        seed = _randomize(seed, tokenId);
-
-        // consider having 3 rarities for each trait, then pick a ranodm one from each rarity
-        uint8 head = uint8((seed % 6)+1);       // 1-6
-        uint8 face = uint8((seed % 6)+1);       // 1-6
-        uint8 accessory = uint8((seed % 6)+1);  // 1-6
-        uint8 weapon = uint8((seed % 6)+1);     // 1-6
-        uint8 overall = uint8((seed % 6)+1);    // 1-6
-        uint8 background = uint8((seed % 6)+1); // 1-6
-        uint8 ranking = uint8((seed % 4));      // 0-3
-
-        WarriorStats memory ws = WarriorStats(head, face, accessory, weapon, overall, background, 0, 0, 0, 0, ranking);
-        stats[tokenId] = ws;
-    }
-
-    function _generateSeed() internal view returns (uint256) {
-        return
+    function _generateRandNum(uint256 tokenId) internal pure returns(uint256) {
+        uint256 seed = 
             uint256(keccak256(abi.encodePacked(msg.sender, block.timestamp, block.difficulty)));
+        return(uint256(keccak256(abi.encode(seed, tokenId))));
     }
 
-    function _randomize(uint256 seed, uint256 tokenId) internal pure returns (uint256) {
-        return uint256(keccak256(abi.encode(seed, tokenId)));
+    function _generateRanking(uint256 tokenId) internal {
+        
+
+        uint8 ranking;
+        uint256 randNum = _generateRandNum(tokenId);
+        if (randNum % 100 == 0) ranking = 4;     // 1%
+        else if (randNum % 10 == 0) ranking = 3; // 10%
+        else if (randNum % 5 == 0) ranking = 2;  // 20%
+        else ranking = 1;
+        
+        stats[tokenId] = WarriorStats(ranking, 0, 0, 0, 0);
     }
 
     // function _changeActions(address _from, uint16[3] memory _warriorTokenIds, uint8[3] memory _actions, uint16 landTokenId) internal {
@@ -238,6 +231,10 @@ contract Warrior is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
 
     function flipSaleState() external onlyOwner {
         saleLive = !saleLive;
+    }
+
+    function changeBaseURI(string memory _baseuri) external onlyOwner {
+        baseURI = _baseuri;
     }
 
     function withdraw() external onlyOwner {
