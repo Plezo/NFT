@@ -64,7 +64,8 @@ contract Warrior is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
     //     _changeActions(_from, _tokenIds, _actions, _landTokenId);
     // }
 
-    function publicMint(uint256 amount, bool scout) external payable {
+    // 175k gas limit for 3, try lowering
+    function publicMint(uint256 amount) external payable {
         require(this.totalSupply() + amount <= MAX_SUPPLY,           "Mint: Max supply reached!");
         require(tx.origin ==  msg.sender,                            "Mint: No contract mints!");
         if (msg.sender != owner()) {
@@ -74,10 +75,11 @@ contract Warrior is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
             require(msg.value == price * amount,                     "Mint: Incorrect ETH amount!");
         }
 
-        uint256 firstTokenId = _currentIndex;
-        for (uint256 i; i < amount; i++) {
-            _generateRanking(firstTokenId+i);
+        uint256[3] memory tokenIds = [_currentIndex, 0, 0];
+        for (uint256 i = 1; i < amount; i++) {
+            tokenIds[i] = tokenIds[0]+1;
         }
+        _generateRankings(tokenIds);
         numMinted[msg.sender] += amount;
         _safeMint(msg.sender, amount);
 
@@ -104,7 +106,7 @@ contract Warrior is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
         for (uint256 i; i < warriorTokenIds.length; i++) {
             WarriorStats memory warriorStats = stats[warriorTokenIds[i]];
 
-            (warriorStats.farmingEXP, warriorStats.farmingLVL ) = 
+            (stats[warriorTokenIds[i]].farmingEXP, stats[warriorTokenIds[i]].farmingLVL ) = 
                     _calculateEXPandLVL(actions[i], 
                         actions[i] == 2 ? warriorStats.farmingEXP : warriorStats.trainingEXP, 
                         actions[i] == 2 ? warriorStats.farmingLVL : warriorStats.trainingLVL,
@@ -137,27 +139,27 @@ contract Warrior is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
         ██ ██   ████    ██    ███████ ██   ██ ██   ████ ██   ██ ███████ 
     */
 
-    function _baseURI() internal pure override returns (string memory) {
+    function _baseURI() internal view override returns (string memory) {
         return baseURI;
     }
 
-    function _generateRandNum(uint256 tokenId) internal pure returns(uint256) {
+    function _generateRandNum(uint256 tokenId) internal view returns(uint256) {
         uint256 seed = 
             uint256(keccak256(abi.encodePacked(msg.sender, block.timestamp, block.difficulty)));
         return(uint256(keccak256(abi.encode(seed, tokenId))));
     }
 
-    function _generateRanking(uint256 tokenId) internal {
-        
+    function _generateRankings(uint256[3] memory tokenIds) internal {
+        for (uint256 i; i < tokenIds.length; i++) {
+            uint256 ranking;
+            uint256 randNum = _generateRandNum(tokenIds[i]);
+            if (randNum % 100 == 0) ranking = 4;     // 1%
+            else if (randNum % 10 == 0) ranking = 3; // 10%
+            else if (randNum % 5 == 0) ranking = 2;  // 20%
+            else ranking = 1;
 
-        uint8 ranking;
-        uint256 randNum = _generateRandNum(tokenId);
-        if (randNum % 100 == 0) ranking = 4;     // 1%
-        else if (randNum % 10 == 0) ranking = 3; // 10%
-        else if (randNum % 5 == 0) ranking = 2;  // 20%
-        else ranking = 1;
-        
-        stats[tokenId] = WarriorStats(ranking, 0, 0, 0, 0);
+            stats[tokenIds[i]] = WarriorStats(uint8(ranking), 0, 0, 0, 0);
+        }
     }
 
     // function _changeActions(address _from, uint16[3] memory _warriorTokenIds, uint8[3] memory _actions, uint16 landTokenId) internal {
