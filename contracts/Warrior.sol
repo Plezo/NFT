@@ -1,39 +1,29 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.4;
 
-import './Land.sol';
-import './RESOURCE.sol';
-import "./ERC721A.sol";
-import "./ERC721ABurnable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/Counters.sol";
+import "./ERC721A.sol";
+import "./ERC721ABurnable.sol";
+import './Land.sol';
+import './RESOURCE.sol';
+import './Staking.sol';
 
 contract Warrior is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
 
     uint16 public MAX_SUPPLY = 8888;
     uint64 public price = 0.08 ether;
     uint8 public maxPerWallet = 3;
-    // uint32 public landClaimTime = 1 days;
     bool public saleLive;
 
     Land landContract;
     RESOURCE resource;
+    Staking staking;
 
     string public baseURI = "";
     
-    // generate more
     uint8[4] public rankingsMaxLevel = [20, 40, 60, 80];
 
-    // enum Actions { UNSTAKED, SCOUTING, FARMING, TRAINING }
-    // struct Action  {
-    //     address owner;
-    //     uint64 timeStarted;
-    //     uint8 action;
-    // }
-
-    // higher ranking => better armor, weapon and headpiece
-    // gender, accessory(1,2 10%,3 5%) [face accessory, idk, somethin crazy], weapon, background, hair, eyes, mouth, headpiece, armor
     struct WarriorStats {
         uint8 ranking;
         uint8 trainingLVL;  // 255
@@ -42,8 +32,6 @@ contract Warrior is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
         uint16 farmingEXP;  // 65000
     }
 
-    // mapping (uint256 => bool) public landClaimed;
-    // mapping (uint256 => Action) public activities;
     mapping (uint256 => WarriorStats) public stats;
     mapping (address => uint256) public numMinted;
     
@@ -58,11 +46,6 @@ contract Warrior is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
         ██      ██    ██ ██   ██ ██      ██ ██      
         ██       ██████  ██████  ███████ ██  ██████ 
     */
-
-    // if not staking land, just use any number
-    // function changeActions(address _from, uint16[3] calldata _tokenIds, uint8[3] calldata _actions, uint16 _landTokenId) external {
-    //     _changeActions(_from, _tokenIds, _actions, _landTokenId);
-    // }
 
     // 175k gas limit for 3, try lowering
     function publicMint(uint256 amount) external payable {
@@ -99,9 +82,22 @@ contract Warrior is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
         // }
     }
 
+    function addEXP(uint256 warriorTokenId, uint256 action, uint256 amountExp) external {
+        require(msg.sender == owner() || msg.sender == address(staking), "EXP: Caller must be landContract contract");
+
+        WarriorStats memory warriorStats = stats[warriorTokenId];
+
+        (stats[warriorTokenId].farmingEXP, stats[warriorTokenId].farmingLVL ) = 
+                _calculateEXPandLVL(action, 
+                    action == 2 ? warriorStats.farmingEXP : warriorStats.trainingEXP, 
+                    action == 2 ? warriorStats.farmingLVL : warriorStats.trainingLVL,
+                    amountExp,
+                    rankingsMaxLevel[warriorStats.ranking]);
+    }
+
     // for now the levels are 0xp, 100xp, 200xp, 300xp, per level so y=100x (make a graph for visualizing when tryna find the right one)
     function addEXP(uint16[3] memory warriorTokenIds, uint8[3] memory actions, uint16[3] memory expArr) external {
-        require(msg.sender == owner() || msg.sender == address(landContract), "EXP: Caller must be landContract contract");
+        require(msg.sender == owner() || msg.sender == address(staking), "EXP: Caller must be landContract contract");
 
         for (uint256 i; i < warriorTokenIds.length; i++) {
             WarriorStats memory warriorStats = stats[warriorTokenIds[i]];
@@ -162,65 +158,24 @@ contract Warrior is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
         }
     }
 
-    // function _changeActions(address _from, uint16[3] memory _warriorTokenIds, uint8[3] memory _actions, uint16 landTokenId) internal {
-    //     bool stakeLand;
-    //     for (uint256 i; i < _warriorTokenIds.length; i++) {
-    //         require(ownerOf(_warriorTokenIds[i]) == _from || 
-    //             activities[_warriorTokenIds[i]].owner == _from &&
-    //             (msg.sender == address(landContract) || msg.sender == _from),
-    //              "ChangeAction: Must be owner of token!");
-    //         require(activities[_warriorTokenIds[i]].action != _actions[i], "ChangeAction: Already performing that action!");
-
-    //         activities[_warriorTokenIds[i]] = Action({
-    //             owner: _from,
-    //             timeStarted: uint64(block.timestamp),
-    //             action: _actions[i]
-    //         });
-
-    //         // check for security flaws
-    //         // IF UNSTAKED
-    //         if (_actions[i] == 0) {
-    //             _approve(msg.sender, _warriorTokenIds[i], _from);
-    //             _transfer(address(this), _from, _warriorTokenIds[i]);
-    //         }
-    //         // IF SCOUTING
-    //         else if (_actions[i] == 1) {
-    //             require(!landClaimed[_warriorTokenIds[i]], "ChangeAction: landContract already claimed for token!");
-    //             _transfer(_from, address(this), _warriorTokenIds[i]);
-    //         }
-    //         else stakeLand = true;
-    //     }
-
-    //     if (stakeLand) {
-    //         require(
-    //             0 < _warriorTokenIds.length &&
-    //             _warriorTokenIds.length <= 3 &&
-    //             _warriorTokenIds.length == _actions.length,
-    //             "ChangeAction: Invalid # of actions/warriors");
-    //             for (uint256 i; i < _warriorTokenIds.length; i++) {
-    //                 require(_from == ownerOf(_warriorTokenIds[i]) || _from == activities[_warriorTokenIds[i]].owner, "ChangeAction: Cant stake someone elses token!");
-    //                 require(_actions[i] == 2 || _actions[i] == 3, "ChangeAction: Action(s) must be farming or training to stake to landContract");
-    //             }
-    //             landContract.stakeLand(_from, landTokenId, _warriorTokenIds, _actions);
-    //             for (uint256 i; i < _warriorTokenIds.length; i++) {
-    //                 _approve(msg.sender, _warriorTokenIds[i], _from);
-    //                 _transfer(_from, address(this), _warriorTokenIds[i]);
-    //             }
-    //     }
-    // }
-
-    function _calculateEXPandLVL(uint8 _action, uint16 _exp, uint8 _lvl, uint16 _maxLVL, uint16 _expAdding) internal pure returns(uint16, uint8) {
+    function _calculateEXPandLVL(
+        uint256 _action,
+        uint256 _exp,
+        uint256 _lvl,
+        uint256 _maxLVL,
+        uint256 _expAdding)
+        internal pure returns(uint16, uint8) {
 
         // *100 for farming, *200 for training
-        uint8 multiplier = _action == 2 ? 100 : 200;
+        uint256 multiplier = _action == 2 ? 100 : 200;
 
-        uint16 newEXP = _exp+_expAdding;
+        uint256 newEXP = _exp+_expAdding;
         while (newEXP >= _lvl*multiplier && _lvl < _maxLVL) {
             newEXP -= _lvl*multiplier;
             _lvl++;
         }
 
-        return (newEXP, _lvl);
+        return (uint16(newEXP), uint8(_lvl));
     }
 
     /*
@@ -243,9 +198,10 @@ contract Warrior is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
         payable(owner()).transfer(address(this).balance);
     }
 
-    function setContractAddresses(address _land, address _resource) external onlyOwner {
+    function setContractAddresses(address _land, address _resource, address _staking) external onlyOwner {
         landContract = Land(_land);
         resource = RESOURCE(_resource);
+        staking = Staking(_staking);
     }
 
     // function setLandClaimTime(uint32 _time) external onlyOwner {
