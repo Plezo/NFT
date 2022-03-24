@@ -56,20 +56,25 @@ contract Staking is Ownable, Pausable, IERC721Receiver {
         ██       ██████  ██████  ███████ ██  ██████ 
     */
 
-    // For claiming rewards for FARMING or TRAINING
-    function claim(uint256[3] memory _warriorTokenIds) external whenNotPaused {
+    function changeActions(
+        uint16[3] memory _warriorTokenIds, 
+        Actions[3] memory _actions, 
+        uint256 _landTokenId) 
+        external {
+        require(_warriorTokenIds.length == _actions.length, "ChangeActions: Mismatched input!");
         for (uint256 i; i < _warriorTokenIds.length; i++) {
             if (_warriorTokenIds[i] == 0) continue;
 
-            require(msg.sender == warriorAction[_warriorTokenIds[i]].owner, "Claim: Must be owner!");
-            require(warriorAction[_warriorTokenIds[i]].timeStarted != 0, "Claim: Not staked!");
+            require(
+                msg.sender == warriorAction[_warriorTokenIds[i]].owner ||
+                msg.sender == warrior.ownerOf(_warriorTokenIds[i]),
+                    "Scout: Need to own warrior!");
         }
-
-        _claim(_warriorTokenIds);
+        _changeActions(_warriorTokenIds, _actions, _landTokenId);
     }
 
     // For claiming rewards for SCOUTING and unstakes warriors
-    function claimLand(uint256[3] memory _warriorTokenIds) external {
+    function claimLand(uint16[3] memory _warriorTokenIds) external {
         uint256 numEligible;
         Actions[3] memory actions;
 
@@ -90,8 +95,20 @@ contract Staking is Ownable, Pausable, IERC721Receiver {
         _changeActions(_warriorTokenIds, actions, 0);
     }
 
+    // For claiming rewards for FARMING or TRAINING
+    function claim(uint256[3] memory _warriorTokenIds) external whenNotPaused {
+        for (uint256 i; i < _warriorTokenIds.length; i++) {
+            if (_warriorTokenIds[i] == 0) continue;
+
+            require(msg.sender == warriorAction[_warriorTokenIds[i]].owner, "Claim: Must be owner!");
+            require(warriorAction[_warriorTokenIds[i]].timeStarted != 0, "Claim: Not staked!");
+        }
+
+        _claim(_warriorTokenIds);
+    }
+
     // unstakes all warriors, and land if land token is not 0
-    function unstake(uint256[3] memory _warriorTokenIds, uint256 _landTokenId) external {
+    function unstake(uint16[3] memory _warriorTokenIds, uint256 _landTokenId) external {
         Actions[3] memory actions;
 
         for (uint256 i; i < _warriorTokenIds.length; i++) {
@@ -141,7 +158,7 @@ contract Staking is Ownable, Pausable, IERC721Receiver {
     }
 
     function _changeActions(
-        uint256[3] memory _warriorTokenIds, 
+        uint16[3] memory _warriorTokenIds, 
         Actions[3] memory _actions, 
         uint256 _landTokenId) 
         internal {
@@ -162,13 +179,6 @@ contract Staking is Ownable, Pausable, IERC721Receiver {
             require(_actions[i] != warriorAction[_warriorTokenIds[i]].action, 
                     "ChangeAction: Already performing that action!");
 
-            warriorAction[_warriorTokenIds[i]] = Action({
-                owner: msg.sender,
-                landTokenId: uint16(_landTokenId),
-                timeStarted: uint64(block.timestamp),
-                action: _actions[i]
-            });
-
             if (_actions[i] == Actions.UNSTAKE) {
                 require(_landTokenId == 0, 
                     "ChangeAction: Land token must be 0 if not farming or training!");
@@ -183,7 +193,8 @@ contract Staking is Ownable, Pausable, IERC721Receiver {
                 require(_landTokenId == 0, 
                     "ChangeAction: Land token must be 0 if not farming or training!");
 
-                warrior.safeTransferFrom(msg.sender, address(this), _warriorTokenIds[i]);
+                if (warriorAction[_warriorTokenIds[i]].timeStarted == 0)
+                    warrior.safeTransferFrom(msg.sender, address(this), _warriorTokenIds[i]);
             }
             else {
                 // not sure if possible to have anything else
@@ -198,16 +209,25 @@ contract Staking is Ownable, Pausable, IERC721Receiver {
 
                 // find a less embarrassing way of implementing this
                 if (i == _warriorTokenIds.length-1) {
-                    land.approve(address(this), _landTokenId);
-                    land.safeTransferFrom(msg.sender, address(this), _landTokenId);
+                    if (landStake[msg.sender].landTokenId != _landTokenId)
+                        _stakeLand(uint16(_landTokenId), _warriorTokenIds, _actions);
                 }
 
                 // possibility of gas optimizing here?
                 // consider hard coding an approval for all contracts
                 // issue is also that Staking.sol calls the approve and not msg.sender
-                warrior.approve(address(this), _warriorTokenIds[i]);
-                warrior.safeTransferFrom(msg.sender, address(this), _warriorTokenIds[i]);
+                if (warriorAction[_warriorTokenIds[i]].action == Actions.UNSTAKE) {
+                    warrior.approve(address(this), _warriorTokenIds[i]);
+                    warrior.safeTransferFrom(msg.sender, address(this), _warriorTokenIds[i]);
+                }
             }
+            
+            warriorAction[_warriorTokenIds[i]] = Action({
+                owner: msg.sender,
+                landTokenId: uint16(_landTokenId),
+                timeStarted: uint64(block.timestamp),
+                action: _actions[i]
+            });
         }
     }
 

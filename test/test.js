@@ -65,6 +65,7 @@ describe("Staking", function () {
             await warrior.connect(addr1).publicMint(amount, {value: ethers.utils.parseEther(`${price*amount}`)});
             await warrior.connect(addr2).publicMint(amount, {value: ethers.utils.parseEther(`${price*amount}`)});
 
+            // Should successfully mint warriors to the two wallets
             expect(await warrior.totalSupply()).to.equal(amount*2);
             expect(await warrior.balanceOf(addr1.address)).to.equal(3);
             expect(await warrior.balanceOf(addr2.address)).to.equal(3);
@@ -76,25 +77,30 @@ describe("Staking", function () {
             // addr1 will own land # 1, 2, 3
             // addr2 will own land # 4, 5, 6
 
-            const gasLimitclaimLandIfEligible = (await staking.connect(addr1).estimateGas.claim([1, 2, 3])).toNumber();
-            console.log("Claim Land gas limit:", gasLimitclaimLandIfEligible, "\nGas cost @ 100gwei:", at100Gwei(gasLimitclaimLandIfEligible));
+            const gasLimitScout = (await staking.connect(addr1).estimateGas.changeActions([1, 2, 3], [1, 1, 1], 0)).toNumber();
+            console.log("Change action gas limit:", gasLimitScout, "\nGas cost @ 100gwei:", at100Gwei(gasLimitScout));
             await staking.connect(addr1).changeActions([1, 2, 3], [1, 1, 1], 0);
             await staking.connect(addr2).changeActions([4, 5, 6], [1, 1, 1], 0);
 
+            // Wallets should be empty since its staked in staking address
+            console.log(await staking.warriorAction(1))
             expect(await warrior.balanceOf(addr1.address)).to.equal(0);
             expect(await warrior.balanceOf(addr2.address)).to.equal(0);
-            expect(await warrior.balanceOf(staking.address)).to.equal(6);
+            expect(await warrior.balanceOf(staking.address)).to.equal(amount*2);
 
-            const gasLimitClaim = (await staking.connect(addr1).estimateGas.claim([1, 2, 3])).toNumber();
-            console.log("Claim Land gas limit:", gasLimitClaim, "\nGas cost @ 100gwei:", at100Gwei(gasLimitClaim));
-            await staking.connect(addr1).claim([1, 2, 3]);
-            await staking.connect(addr2).claim([4, 5, 6]);
+            const gasLimitClaimLand = (await staking.connect(addr1).estimateGas.claimLand([1, 2, 3])).toNumber();
+            console.log("Claim Land gas limit:", gasLimitClaimLand, "\nGas cost @ 100gwei:", at100Gwei(gasLimitClaimLand));
+            await staking.connect(addr1).claimLand([1, 2, 3]);
+            await staking.connect(addr2).claimLand([4, 5, 6]);
 
+            // Land should be in addr1 and addr2 wallets
             expect(await land.totalSupply()).to.equal(amount*2);
             expect(await land.balanceOf(addr1.address)).to.equal(amount);
             expect(await land.balanceOf(addr2.address)).to.equal(amount);
-            expect(await warrior.balanceOf(staking.address)).to.equal(amount);
-            expect(await warrior.balanceOf(staking.address)).to.equal(amount);
+
+            // Should get warriors back
+            expect(await warrior.balanceOf(addr1.address)).to.equal(amount);
+            expect(await warrior.balanceOf(addr2.address)).to.equal(amount);
 
             // Stakes land and the three warriors
             // addr1 stakes all their tokens as FARMING
