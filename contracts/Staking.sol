@@ -21,7 +21,7 @@ contract Staking is Ownable, Pausable, IERC721Receiver {
     Land land;
     RESOURCE resource;
 
-    enum Actions { UNSTAKED, SCOUTING, FARMING, TRAINING }
+    enum Actions { UNSTAKE, SCOUTING, FARMING, TRAINING }
     struct Action {
         address owner;
         uint16 landTokenId;
@@ -56,11 +56,7 @@ contract Staking is Ownable, Pausable, IERC721Receiver {
         ██       ██████  ██████  ███████ ██  ██████ 
     */
 
-    // If not staking land, use 0
-    function changeActions(uint256[3] calldata _tokenIds, Actions[3] calldata _actions, uint256 _landTokenId) external {
-        _changeActions(_tokenIds, _actions, _landTokenId);
-    }
-
+    // For claiming rewards for FARMING or TRAINING
     function claim(uint256[3] memory _warriorTokenIds) external whenNotPaused {
         for (uint256 i; i < _warriorTokenIds.length; i++) {
             if (_warriorTokenIds[i] == 0) continue;
@@ -70,6 +66,50 @@ contract Staking is Ownable, Pausable, IERC721Receiver {
         }
 
         _claim(_warriorTokenIds);
+    }
+
+    // For claiming rewards for SCOUTING and unstakes warriors
+    function claimLand(uint256[3] memory _warriorTokenIds) external {
+        uint256 numEligible;
+        Actions[3] memory actions;
+
+        for (uint256 i; i < _warriorTokenIds.length; i++) {
+            if (_warriorTokenIds[i] == 0) continue;
+
+            require(msg.sender == warriorAction[_warriorTokenIds[i]].owner, "ClaimLand: Must be owner!");
+            require(warriorAction[_warriorTokenIds[i]].timeStarted != 0, "ClaimLand: Not staked!");
+            require(!landClaimed[_warriorTokenIds[i]], "ClaimLand: Already claimed land!");
+            require(block.timestamp > warriorAction[_warriorTokenIds[i]].timeStarted + landClaimTime,
+                "ClaimLand: Staked land claim time has not passed for one of the warriors!");
+
+            landClaimed[_warriorTokenIds[i]] = true;
+            actions[i] = Actions.UNSTAKE;
+            numEligible++;
+        }
+        land.mintLand(msg.sender, numEligible);
+        _changeActions(_warriorTokenIds, actions, 0);
+    }
+
+    // unstakes all warriors, and land if land token is not 0
+    function unstake(uint256[3] memory _warriorTokenIds, uint256 _landTokenId) external {
+        Actions[3] memory actions;
+
+        for (uint256 i; i < _warriorTokenIds.length; i++) {
+            if (_warriorTokenIds[i] == 0) continue;
+
+            require(msg.sender == warriorAction[_warriorTokenIds[i]].owner,
+                "Unstake: Must be owner of warrior!");
+            actions[i] = Actions.UNSTAKE;
+        }
+
+        if (_landTokenId != 0) {
+            require(_landTokenId == landStake[msg.sender].landTokenId,
+                "Unstake: Must be owner of land!");
+
+            _unstakeLand(_landTokenId);
+        }
+
+        _changeActions(_warriorTokenIds, actions, 0);
     }
 
     /*
@@ -95,12 +135,16 @@ contract Staking is Ownable, Pausable, IERC721Receiver {
         land.safeTransferFrom(msg.sender, address(this), _landTokenId);
     }
 
-    function _unstakeLand(uint16 _landTokenId) internal {
+    function _unstakeLand(uint256 _landTokenId) internal {
         land.safeTransferFrom(address(this), msg.sender, _landTokenId);
         delete landStake[msg.sender];
     }
 
-    function _changeActions(uint256[3] memory _warriorTokenIds, Actions[3] memory _actions, uint256 _landTokenId) internal {
+    function _changeActions(
+        uint256[3] memory _warriorTokenIds, 
+        Actions[3] memory _actions, 
+        uint256 _landTokenId) 
+        internal {
         require(
                 0 < _warriorTokenIds.length &&
                 _warriorTokenIds.length <= 3 &&
@@ -117,12 +161,6 @@ contract Staking is Ownable, Pausable, IERC721Receiver {
 
             require(_actions[i] != warriorAction[_warriorTokenIds[i]].action, 
                     "ChangeAction: Already performing that action!");
-        }
-
-        _claim(_warriorTokenIds);
-
-        for (uint256 i; i < _warriorTokenIds.length; i++) {
-            if (_warriorTokenIds[i] == 0) continue;
 
             warriorAction[_warriorTokenIds[i]] = Action({
                 owner: msg.sender,
@@ -131,10 +169,7 @@ contract Staking is Ownable, Pausable, IERC721Receiver {
                 action: _actions[i]
             });
 
-            // problem here is we are moving the warrior back, but in the Stake struct
-            // its still logged as if the warrior were staked
-            // this ONLY applies to if you were unstaking a SCOUTING warrior
-            if (_actions[i] == Actions.UNSTAKED) {
+            if (_actions[i] == Actions.UNSTAKE) {
                 require(_landTokenId == 0, 
                     "ChangeAction: Land token must be 0 if not farming or training!");
 
@@ -177,63 +212,50 @@ contract Staking is Ownable, Pausable, IERC721Receiver {
     }
 
     function _claim(uint256[3] memory _warriorTokenIds) internal {
+        uint256[3] memory expAmount;
+        uint256[3] memory actions;
+
         for (uint256 i; i < _warriorTokenIds.length; i++) {
             if (_warriorTokenIds[i] == 0) continue;
+            uint256 claimAmount;
+            uint256 numFarming;
+            uint256 timeStarted = warriorAction[_warriorTokenIds[i]].timeStarted;
 
-            if (warriorAction[_warriorTokenIds[i]].landTokenId == 0) {
-                require(block.timestamp > warriorAction[_warriorTokenIds[i]].timeStarted + landClaimTime,
-                    "Claim: Staked land claim time has not passed yet!");
+            (uint8 farmingMultiplier, uint8 trainingMultiplier) = 
+                land.getStats(warriorAction[_warriorTokenIds[i]].landTokenId);
 
-                landClaimed[_warriorTokenIds[i]] = true;
+            if (warriorAction[_warriorTokenIds[i]].action == Actions.FARMING) {
+                actions[i] = 2;
+                numFarming++;
 
-                // terrible gas efficiency, fix it
-                land.mintLand(msg.sender, 1);
+                // eventually add the fact that lvls make u claim more
+                claimAmount += 
+                    ((((block.timestamp - timeStarted)
+                    * BASE_RESOURCE_RATE)
+                    / BASE_TIME)
+                    * (5-numFarming))
+                    / 5;
+
+                expAmount[i] = uint16(
+                    ((block.timestamp - timeStarted)
+                    * (BASE_FARMING_EXP / BASE_TIME) 
+                    * farmingMultiplier)
+                    / 100);
+                
             }
-            else {
-                uint256[3] memory expAmount;
-                uint256[3] memory actions;
-
-                uint256 claimAmount;
-                uint256 numFarming;
-                uint256 timeStarted = warriorAction[_warriorTokenIds[i]].timeStarted;
-
-                (uint8 farmingMultiplier, uint8 trainingMultiplier) = 
-                    land.getStats(warriorAction[_warriorTokenIds[i]].landTokenId);
-
-                if (warriorAction[_warriorTokenIds[i]].action == Actions.FARMING) {
-                    actions[i] = 2;
-                    numFarming++;
-
-                    // eventually add the fact that lvls make u claim more
-                    claimAmount += 
-                        ((((block.timestamp - timeStarted)
-                        * BASE_RESOURCE_RATE)
-                        / BASE_TIME)
-                        * (5-numFarming))
-                        / 5;
-
-                    expAmount[i] = uint16(
-                        ((block.timestamp - timeStarted)
-                        * (BASE_FARMING_EXP / BASE_TIME) 
-                        * farmingMultiplier)
-                        / 100);
-                    
-                }
-                else if (warriorAction[_warriorTokenIds[i]].action == Actions.TRAINING) {
-                    actions[i] = 3;
-                    expAmount[i] = uint16(
-                        ((block.timestamp - timeStarted)
-                        * (BASE_TRAINING_EXP / BASE_TIME)
-                        * trainingMultiplier)
-                        / 100);
-                }
-
-                if (claimAmount > 0 && resource.totalSupply() + claimAmount <= MAX_RESOURCE_CIRCULATING)
-                    resource.mint(msg.sender, claimAmount);
-
-                warrior.addEXP(_warriorTokenIds, actions, expAmount); 
+            else if (warriorAction[_warriorTokenIds[i]].action == Actions.TRAINING) {
+                actions[i] = 3;
+                expAmount[i] = uint16(
+                    ((block.timestamp - timeStarted)
+                    * (BASE_TRAINING_EXP / BASE_TIME)
+                    * trainingMultiplier)
+                    / 100);
             }
+
+            if (claimAmount > 0 && resource.totalSupply() + claimAmount <= MAX_RESOURCE_CIRCULATING)
+                resource.mint(msg.sender, claimAmount);
         }
+        warrior.addEXP(_warriorTokenIds, actions, expAmount); 
     }
 
     /*
