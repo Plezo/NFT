@@ -165,8 +165,4 @@ contract Warrior is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
         resource = RESOURCE(_resource);
         staking = Staking(_staking);
     }
-
-    // function setLandClaimTime(uint32 _time) external onlyOwner {
-    //     landClaimTime = _time;
-    // }
 }

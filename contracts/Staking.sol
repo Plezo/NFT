@@ -48,6 +48,14 @@ contract Staking is Ownable, Pausable, IERC721Receiver {
         resource = RESOURCE(_resource);
     }
 
+    /*
+        ██████  ██    ██ ██████  ██      ██  ██████ 
+        ██   ██ ██    ██ ██   ██ ██      ██ ██      
+        ██████  ██    ██ ██████  ██      ██ ██      
+        ██      ██    ██ ██   ██ ██      ██ ██      
+        ██       ██████  ██████  ███████ ██  ██████ 
+    */
+
     // If not staking land, use 0
     function changeActions(uint256[3] calldata _tokenIds, Actions[3] calldata _actions, uint256 _landTokenId) external {
         _changeActions(_tokenIds, _actions, _landTokenId);
@@ -55,15 +63,22 @@ contract Staking is Ownable, Pausable, IERC721Receiver {
 
     function claim(uint256[3] memory _warriorTokenIds) external whenNotPaused {
         for (uint256 i; i < _warriorTokenIds.length; i++) {
-            // we use 0 as a null
-            if (_warriorTokenIds[i] != 0) {
-                require(msg.sender == warriorAction[_warriorTokenIds[i]].owner, "Claim: Must be owner!");
-                require(warriorAction[_warriorTokenIds[i]].timeStarted != 0, "Claim: Not staked!");
-            }
+            if (_warriorTokenIds[i] == 0) continue;
+
+            require(msg.sender == warriorAction[_warriorTokenIds[i]].owner, "Claim: Must be owner!");
+            require(warriorAction[_warriorTokenIds[i]].timeStarted != 0, "Claim: Not staked!");
         }
 
         _claim(_warriorTokenIds);
     }
+
+    /*
+        ██ ███    ██ ████████ ███████ ██████  ███    ██  █████  ██      
+        ██ ████   ██    ██    ██      ██   ██ ████   ██ ██   ██ ██      
+        ██ ██ ██  ██    ██    █████   ██████  ██ ██  ██ ███████ ██      
+        ██ ██  ██ ██    ██    ██      ██   ██ ██  ██ ██ ██   ██ ██      
+        ██ ██   ████    ██    ███████ ██   ██ ██   ████ ██   ██ ███████ 
+    */
 
     function _stakeLand(
         uint16 _landTokenId, 
@@ -221,6 +236,14 @@ contract Staking is Ownable, Pausable, IERC721Receiver {
         }
     }
 
+    /*
+         ██████  ██     ██ ███    ██ ███████ ██████  
+        ██    ██ ██     ██ ████   ██ ██      ██   ██ 
+        ██    ██ ██  █  ██ ██ ██  ██ █████   ██████  
+        ██    ██ ██ ███ ██ ██  ██ ██ ██      ██   ██ 
+         ██████   ███ ███  ██   ████ ███████ ██   ██ 
+    */
+
     function setVars(
         uint64 _resourceRate, 
         uint128 _maxCirculating, 
@@ -233,6 +256,10 @@ contract Staking is Ownable, Pausable, IERC721Receiver {
             BASE_FARMING_EXP = _baseFarmingEXP;
             BASE_TRAINING_EXP = _baseTrainingEXP;
             BASE_TIME = _time;
+    }
+
+    function setLandClaimTime(uint32 _time) external onlyOwner {
+        landClaimTime = _time;
     }
 
     function onERC721Received(
