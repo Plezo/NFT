@@ -85,9 +85,9 @@ contract Land is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
     function _generateMultipliers(uint256 tokenId) internal {
         uint256 randNum = _generateRandNum(tokenId);
 
-        stats[tokenId].farmingMultiplier = uint8(randNum % 1000)+1;
+        stats[tokenId].farmingMultiplier = uint8(randNum % 100)+101;
         randNum = _generateRandNum(tokenId);
-        stats[tokenId].trainingMultiplier = uint8(randNum % 1000)+1;
+        stats[tokenId].trainingMultiplier = uint8(randNum % 100)+101;
     }
 
     function withdraw() external onlyOwner {

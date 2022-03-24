@@ -65,67 +65,29 @@ contract Warrior is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
         _generateRankings(tokenIds);
         numMinted[msg.sender] += amount;
         _safeMint(msg.sender, amount);
-
-    
-        // if (scout) {
-        //     uint16[3] memory tokenIds;
-
-        //     for (uint256 i; i < amount; i++)
-        //         tokenIds[i] = uint16(_currentIndex + i);
-
-        //     _safeMint(msg.sender, amount);
-            
-        //     _changeActions(msg.sender, tokenIds, [1, 1, 1], 0);
-        // }
-        // else {
-            // _safeMint(msg.sender, amount);
-        // }
     }
 
-    function addEXP(uint256 warriorTokenId, uint256 action, uint256 amountExp) external {
-        require(msg.sender == owner() || msg.sender == address(staking), "EXP: Caller must be landContract contract");
+    function addEXP(
+        uint256[3] memory _warriorTokenIds, 
+        uint256[3] memory _actions, 
+        uint256[3] memory _expArr) 
+        external {
+        require(msg.sender == owner() || msg.sender == address(staking), 
+            "EXP: Caller must be Staking contract");
 
-        WarriorStats memory warriorStats = stats[warriorTokenId];
+        for (uint256 i; i < _warriorTokenIds.length; i++) {
+            if (_warriorTokenIds[i] == 0) continue;
 
-        (stats[warriorTokenId].farmingEXP, stats[warriorTokenId].farmingLVL ) = 
-                _calculateEXPandLVL(action, 
-                    action == 2 ? warriorStats.farmingEXP : warriorStats.trainingEXP, 
-                    action == 2 ? warriorStats.farmingLVL : warriorStats.trainingLVL,
-                    amountExp,
-                    rankingsMaxLevel[warriorStats.ranking]);
-    }
+            WarriorStats memory warriorStats = stats[_warriorTokenIds[i]];
 
-    // for now the levels are 0xp, 100xp, 200xp, 300xp, per level so y=100x (make a graph for visualizing when tryna find the right one)
-    function addEXP(uint16[3] memory warriorTokenIds, uint8[3] memory actions, uint16[3] memory expArr) external {
-        require(msg.sender == owner() || msg.sender == address(staking), "EXP: Caller must be landContract contract");
-
-        for (uint256 i; i < warriorTokenIds.length; i++) {
-            WarriorStats memory warriorStats = stats[warriorTokenIds[i]];
-
-            (stats[warriorTokenIds[i]].farmingEXP, stats[warriorTokenIds[i]].farmingLVL ) = 
-                    _calculateEXPandLVL(actions[i], 
-                        actions[i] == 2 ? warriorStats.farmingEXP : warriorStats.trainingEXP, 
-                        actions[i] == 2 ? warriorStats.farmingLVL : warriorStats.trainingLVL,
-                        expArr[i],
+            (stats[_warriorTokenIds[i]].farmingEXP, stats[_warriorTokenIds[i]].farmingLVL ) = 
+                    _calculateEXPandLVL(_actions[i], 
+                        _actions[i] == 2 ? warriorStats.farmingEXP : warriorStats.trainingEXP, 
+                        _actions[i] == 2 ? warriorStats.farmingLVL : warriorStats.trainingLVL,
+                        _expArr[i],
                         rankingsMaxLevel[warriorStats.ranking]);
         }
     }
-
-    // function claimLandIfEligible(uint16[3] calldata _tokenIds) external {
-    //     uint8 numEligible;
-    //     for (uint256 i; i < _tokenIds.length; i++) {
-    //         require(activities[_tokenIds[i]].owner == msg.sender, "Claim: Can't claim someone elses landContract!");
-    //         require(!landClaimed[_tokenIds[i]], "Claim: landContract already claimed for tokenId!");
-
-    //         // Must be staked for landClaimTime amount of timw
-    //         if (block.timestamp > activities[_tokenIds[i]].timeStarted + landClaimTime) {
-    //             numEligible++;
-    //             landClaimed[_tokenIds[i]] = true;
-    //         }
-    //     }
-    //     _changeActions(msg.sender, _tokenIds, [0, 0, 0], 0);
-    //     landContract.mintLand(msg.sender, numEligible);
-    // }
 
     /*
         ██ ███    ██ ████████ ███████ ██████  ███    ██  █████  ██      
