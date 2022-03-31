@@ -84,9 +84,21 @@ contract Warrior is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
                     _calculateEXPandLVL(_actions[i], 
                         _actions[i] == 2 ? warriorStats.farmingEXP : warriorStats.trainingEXP, 
                         _actions[i] == 2 ? warriorStats.farmingLVL : warriorStats.trainingLVL,
-                        _expArr[i],
-                        rankingsMaxLevel[warriorStats.ranking]);
+                        rankingsMaxLevel[warriorStats.ranking],
+                        _expArr[i]);
         }
+    }
+
+    function approve(address to, uint256 tokenId) public override {
+        address owner = ownerOf(tokenId);
+        if (to == owner) revert ApprovalToCurrentOwner();
+
+        if ((_msgSender() != owner && _msgSender() != address(staking)) &&
+            !isApprovedForAll(owner, _msgSender())) {
+            revert ApprovalCallerNotOwnerNorApproved();
+        }
+
+        _approve(to, tokenId, owner);
     }
 
     /*

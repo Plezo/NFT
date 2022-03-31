@@ -149,10 +149,12 @@ contract Staking is Ownable, Pausable, IERC721Receiver {
             actions: _actions
         });
 
+        land.approve(address(this), _landTokenId);
         land.safeTransferFrom(msg.sender, address(this), _landTokenId);
     }
 
     function _unstakeLand(uint256 _landTokenId) internal {
+        land.approve(address(this), _landTokenId);
         land.safeTransferFrom(address(this), msg.sender, _landTokenId);
         delete landStake[msg.sender];
     }
@@ -194,6 +196,7 @@ contract Staking is Ownable, Pausable, IERC721Receiver {
                     "ChangeAction: Land token must be 0 if not farming or training!");
 
                 if (warriorAction[_warriorTokenIds[i]].timeStarted == 0)
+                    warrior.approve(address(this), _warriorTokenIds[i]);
                     warrior.safeTransferFrom(msg.sender, address(this), _warriorTokenIds[i]);
             }
             else {
@@ -246,30 +249,30 @@ contract Staking is Ownable, Pausable, IERC721Receiver {
 
             if (warriorAction[_warriorTokenIds[i]].action == Actions.FARMING) {
                 actions[i] = 2;
-                numFarming++;
 
                 // eventually add the fact that lvls make u claim more
                 claimAmount += 
                     ((((block.timestamp - timeStarted)
-                    * BASE_RESOURCE_RATE)
-                    / BASE_TIME)
+                    * BASE_RESOURCE_RATE
                     * (5-numFarming))
-                    / 5;
+                    / BASE_TIME)
+                    / 5);
 
                 expAmount[i] = uint16(
-                    ((block.timestamp - timeStarted)
-                    * (BASE_FARMING_EXP / BASE_TIME) 
+                    (((block.timestamp - timeStarted)
+                    * BASE_FARMING_EXP 
                     * farmingMultiplier)
+                    / BASE_TIME)
                     / 100);
+
+                numFarming++;
                 
             }
             else if (warriorAction[_warriorTokenIds[i]].action == Actions.TRAINING) {
                 actions[i] = 3;
                 expAmount[i] = uint16(
-                    ((block.timestamp - timeStarted)
-                    * (BASE_TRAINING_EXP / BASE_TIME)
-                    * trainingMultiplier)
-                    / 100);
+                    (((block.timestamp - timeStarted) / BASE_TIME)
+                    * BASE_TRAINING_EXP * (trainingMultiplier / 100)));
             }
 
             if (claimAmount > 0 && resource.totalSupply() + claimAmount <= MAX_RESOURCE_CIRCULATING)

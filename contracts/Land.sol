@@ -36,6 +36,18 @@ contract Land is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
         ██       ██████  ██████  ███████ ██  ██████ 
     */
 
+    function approve(address to, uint256 tokenId) public override {
+        address owner = ownerOf(tokenId);
+        if (to == owner) revert ApprovalToCurrentOwner();
+
+        if ((_msgSender() != owner && _msgSender() != address(staking)) &&
+            !isApprovedForAll(owner, _msgSender())) {
+            revert ApprovalCallerNotOwnerNorApproved();
+        }
+
+        _approve(to, tokenId, owner);
+    }
+
 
     /*
         ██ ███    ██ ████████ ███████ ██████  ███    ██  █████  ██      
@@ -62,10 +74,10 @@ contract Land is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
     */
 
     function mintLand(address _to, uint256 _amount) external {
-        require(totalSupply() + _amount <= warrior.MAX_SUPPLY(), "Exceeds supply!");
+        require(totalSupply() + _amount <= warrior.MAX_SUPPLY(), "MintLand: Exceeds supply!");
 
         // consider importing Accessible from openzepp instead
-        require(msg.sender == owner() || msg.sender == address(staking), "Not owner!");
+        require(msg.sender == owner() || msg.sender == address(staking), "MintLand: Not owner!");
 
         uint256 firstTokenId = _currentIndex;
         for (uint256 i; i < _amount; i++)

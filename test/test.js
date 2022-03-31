@@ -42,15 +42,19 @@ describe("Staking", function () {
 
         await warrior.connect(owner).flipSaleState();
         await warrior.connect(owner).setContractAddresses(land.address, resource.address, staking.address);
+        await land.connect(owner).setContractAddresses(warrior.address, resource.address, staking.address);
         await staking.connect(owner).setLandClaimTime(0);
         await resource.connect(owner).editGameMasters([staking.address], [true]);
-        // await land.connect(owner).setVars(ethers.utils.parseEther("10"), ethers.utils.parseEther("1000000"), 120, 10, 1);
+        // await staking.connect(owner).setVars(ethers.utils.parseEther("10"), ethers.utils.parseEther("1000000"), 120, 10, 1);
 
         // need to mint 0 due to issues with code (idk if I need to "fix")
         await warrior.connect(owner).publicMint(1);
         await land.connect(owner).mintLand(owner.address, 1);
         await warrior.connect(owner).burn(0);
         await land.connect(owner).burn(0);
+
+        console.log("Staking address:", staking.address);
+        console.log("Addr1 address:", addr1.address);
     });
 
     describe("Warrior Contract", function () {
@@ -83,7 +87,6 @@ describe("Staking", function () {
             await staking.connect(addr2).changeActions([4, 5, 6], [1, 1, 1], 0);
 
             // Wallets should be empty since its staked in staking address
-            console.log(await staking.warriorAction(1))
             expect(await warrior.balanceOf(addr1.address)).to.equal(0);
             expect(await warrior.balanceOf(addr2.address)).to.equal(0);
             expect(await warrior.balanceOf(staking.address)).to.equal(amount*2);
@@ -104,19 +107,19 @@ describe("Staking", function () {
 
             // Stakes land and the three warriors
             // addr1 stakes all their tokens as FARMING
-            const gasLimitChangeActions = (await warrior.connect(addr1).estimateGas.changeActions([1, 2, 3], [2, 2, 2], 1)).toNumber();
+            const gasLimitChangeActions = (await staking.connect(addr1).estimateGas.changeActions([1, 2, 3], [2, 2, 2], 1)).toNumber();
             console.log("Change action gas limit:", gasLimitChangeActions, "\nGas cost @ 100gwei:", at100Gwei(gasLimitChangeActions));
-            await warrior.connect(addr1).changeActions([1, 2, 3], [2, 2, 2], 1);
+            await staking.connect(addr1).changeActions([1, 2, 3], [2, 2, 2], 1);
 
             await sleep(1000);
 
-            const gasLimitclaim = (await land.connect(addr1).estimateGas.claim([1, 2, 3])).toNumber();
+            const gasLimitclaim = (await staking.connect(addr1).estimateGas.claim([1, 2, 3])).toNumber();
             console.log("Claim gas limit:", gasLimitclaim, "\nGas cost @ 100gwei:", at100Gwei(gasLimitclaim));
-            await land.connect(addr1).claim([1, 2, 3]);
+            await staking.connect(addr1).claim([1, 2, 3]);
 
             console.log("# of resource:", ethers.utils.formatEther(await resource.balanceOf(addr1.address)));
-            console.log("Farming LVL:", (await warrior.stats(1))[2]);
-            console.log("Farming EXP:", (await warrior.stats(1))[4]);
+            console.log("Land stats:", await land.stats(1));
+            console.log(await warrior.stats(1));
         });
     });
 });
