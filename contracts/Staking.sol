@@ -33,7 +33,6 @@ contract Staking is Ownable, Pausable, IERC721Receiver {
         uint16 landTokenId;
         uint32 timeStaked;
         uint16[3] warriorTokenIds;
-        Actions[3] actions;  // Not sure if needed anymore cuz of warriorAction mapping
     }
 
     // Mappings of tokenIds
@@ -139,14 +138,12 @@ contract Staking is Ownable, Pausable, IERC721Receiver {
 
     function _stakeLand(
         uint16 _landTokenId, 
-        uint16[3] memory _warriorTokenIds, 
-        Actions[3] memory _actions) 
+        uint16[3] memory _warriorTokenIds) 
         internal {
         landStake[msg.sender] = LandStake({
             landTokenId: _landTokenId,
             timeStaked: uint32(block.timestamp),
-            warriorTokenIds: _warriorTokenIds,
-            actions: _actions
+            warriorTokenIds: _warriorTokenIds
         });
 
         land.approve(address(this), _landTokenId);
@@ -213,7 +210,7 @@ contract Staking is Ownable, Pausable, IERC721Receiver {
                 // find a less embarrassing way of implementing this
                 if (i == _warriorTokenIds.length-1) {
                     if (landStake[msg.sender].landTokenId != _landTokenId)
-                        _stakeLand(uint16(_landTokenId), _warriorTokenIds, _actions);
+                        _stakeLand(uint16(_landTokenId), _warriorTokenIds);
                 }
 
                 // possibility of gas optimizing here?
