@@ -35,7 +35,9 @@ describe("Staking", function () {
         resource = await RESOURCE.deploy();
 
         const Land = await ethers.getContractFactory("Land");
-        land = await Land.deploy("", warrior.address, resource.address);
+        // land = await Land.deploy("", warrior.address, resource.address);
+        land = await Land.deploy("");
+
 
         const Staking = await ethers.getContractFactory("Staking");
         staking = await Staking.deploy(warrior.address, land.address, resource.address);
@@ -76,13 +78,10 @@ describe("Staking", function () {
 
             await sleep(1000); // 10 seconds
 
-            // Stakes warriors for scouting and claims land
-            // owner burnt land #0
-            // addr1 will own land # 1, 2, 3
-            // addr2 will own land # 4, 5, 6
+            // Stakes warriors for scouting
 
             const gasLimitScout = (await staking.connect(addr1).estimateGas.changeActions([1, 2, 3], [1, 1, 1], 0)).toNumber();
-            console.log("Change action gas limit:", gasLimitScout, "\nGas cost @ 100gwei:", at100Gwei(gasLimitScout));
+            console.log("Change action scouting gas limit:", gasLimitScout, "\nGas cost @ 100gwei:", at100Gwei(gasLimitScout));
             await staking.connect(addr1).changeActions([1, 2, 3], [1, 1, 1], 0);
             await staking.connect(addr2).changeActions([4, 5, 6], [1, 1, 1], 0);
 
@@ -90,6 +89,11 @@ describe("Staking", function () {
             expect(await warrior.balanceOf(addr1.address)).to.equal(0);
             expect(await warrior.balanceOf(addr2.address)).to.equal(0);
             expect(await warrior.balanceOf(staking.address)).to.equal(amount*2);
+
+            // Claims land after scouting
+            // owner burnt land #0
+            // addr1 will own land # 1, 2, 3
+            // addr2 will own land # 4, 5, 6
 
             const gasLimitClaimLand = (await staking.connect(addr1).estimateGas.claimLand([1, 2, 3])).toNumber();
             console.log("Claim Land gas limit:", gasLimitClaimLand, "\nGas cost @ 100gwei:", at100Gwei(gasLimitClaimLand));
@@ -106,12 +110,12 @@ describe("Staking", function () {
             expect(await warrior.balanceOf(addr2.address)).to.equal(amount);
 
             // Stakes land and the three warriors
-            // addr1 stakes all their tokens as FARMING
+            // addr1 stakes all their tokens as FARMING ([2, 2, 2])
             const gasLimitChangeActions = (await staking.connect(addr1).estimateGas.changeActions([1, 2, 3], [2, 2, 2], 1)).toNumber();
-            console.log("Change action gas limit:", gasLimitChangeActions, "\nGas cost @ 100gwei:", at100Gwei(gasLimitChangeActions));
+            console.log("Change action farming gas limit:", gasLimitChangeActions, "\nGas cost @ 100gwei:", at100Gwei(gasLimitChangeActions));
             await staking.connect(addr1).changeActions([1, 2, 3], [2, 2, 2], 1);
 
-            await sleep(1000);
+            await sleep(1000); // 10 seconds
 
             const gasLimitclaim = (await staking.connect(addr1).estimateGas.claim([1, 2, 3])).toNumber();
             console.log("Claim gas limit:", gasLimitclaim, "\nGas cost @ 100gwei:", at100Gwei(gasLimitclaim));

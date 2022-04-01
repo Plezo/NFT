@@ -10,16 +10,20 @@ import "./RESOURCE.sol";
 
 contract Staking is Ownable, Pausable, IERC721Receiver {
 
-    uint64 public BASE_RESOURCE_RATE = 10 ether;
-    uint128 public MAX_RESOURCE_CIRCULATING = 1000000 ether;
-    uint16 public BASE_FARMING_EXP = 10;
-    uint16 public BASE_TRAINING_EXP = 10;
-    uint32 public BASE_TIME = 1 days;
-    uint32 public landClaimTime = 1 days;
+    struct GameVars {
+        uint64 BASE_RESOURCE_RATE;
+        // uint128 MAX_RESOURCE_CIRCULATING;
+        uint8 BASE_FARMING_EXP;
+        uint8 BASE_TRAINING_EXP;
+        uint32 BASE_TIME;
+        uint32 landClaimTime;
+    }
 
     Warrior warrior;
     Land land;
     RESOURCE resource;
+
+    GameVars gameVars;
 
     enum Actions { UNSTAKE, SCOUTING, FARMING, TRAINING }
     struct Action {
@@ -45,6 +49,14 @@ contract Staking is Ownable, Pausable, IERC721Receiver {
         warrior = Warrior(_warrior);
         land = Land(_land);
         resource = RESOURCE(_resource);
+        gameVars = GameVars({
+            BASE_RESOURCE_RATE:         10 ether,
+            // MAX_RESOURCE_CIRCULATING:   1000000 ether,
+            BASE_FARMING_EXP:           10,
+            BASE_TRAINING_EXP:          10,
+            BASE_TIME:                  1 days,
+            landClaimTime:              1 days
+        });
     }
 
     /*
@@ -83,7 +95,7 @@ contract Staking is Ownable, Pausable, IERC721Receiver {
             require(msg.sender == warriorAction[_warriorTokenIds[i]].owner, "ClaimLand: Must be owner!");
             require(warriorAction[_warriorTokenIds[i]].timeStarted != 0, "ClaimLand: Not staked!");
             require(!landClaimed[_warriorTokenIds[i]], "ClaimLand: Already claimed land!");
-            require(block.timestamp > warriorAction[_warriorTokenIds[i]].timeStarted + landClaimTime,
+            require(block.timestamp > warriorAction[_warriorTokenIds[i]].timeStarted + gameVars.landClaimTime,
                 "ClaimLand: Staked land claim time has not passed for one of the warriors!");
 
             landClaimed[_warriorTokenIds[i]] = true;
@@ -146,12 +158,12 @@ contract Staking is Ownable, Pausable, IERC721Receiver {
             warriorTokenIds: _warriorTokenIds
         });
 
-        land.approve(address(this), _landTokenId);
+        // land.approve(address(this), _landTokenId);
         land.safeTransferFrom(msg.sender, address(this), _landTokenId);
     }
 
     function _unstakeLand(uint256 _landTokenId) internal {
-        land.approve(address(this), _landTokenId);
+        // land.approve(address(this), _landTokenId);
         land.safeTransferFrom(address(this), msg.sender, _landTokenId);
         delete landStake[msg.sender];
     }
@@ -182,7 +194,7 @@ contract Staking is Ownable, Pausable, IERC721Receiver {
                 require(_landTokenId == 0, 
                     "ChangeAction: Land token must be 0 if not farming or training!");
 
-                warrior.approve(msg.sender, _warriorTokenIds[i]);
+                // warrior.approve(msg.sender, _warriorTokenIds[i]);
                 warrior.safeTransferFrom(address(this), msg.sender, _warriorTokenIds[i]);
             }
             else if (_actions[i] == Actions.SCOUTING) {
@@ -193,7 +205,7 @@ contract Staking is Ownable, Pausable, IERC721Receiver {
                     "ChangeAction: Land token must be 0 if not farming or training!");
 
                 if (warriorAction[_warriorTokenIds[i]].timeStarted == 0)
-                    warrior.approve(address(this), _warriorTokenIds[i]);
+                    // warrior.approve(address(this), _warriorTokenIds[i]);
                     warrior.safeTransferFrom(msg.sender, address(this), _warriorTokenIds[i]);
             }
             else {
@@ -217,7 +229,7 @@ contract Staking is Ownable, Pausable, IERC721Receiver {
                 // consider hard coding an approval for all contracts
                 // issue is also that Staking.sol calls the approve and not msg.sender
                 if (warriorAction[_warriorTokenIds[i]].action == Actions.UNSTAKE) {
-                    warrior.approve(address(this), _warriorTokenIds[i]);
+                    // warrior.approve(address(this), _warriorTokenIds[i]);
                     warrior.safeTransferFrom(msg.sender, address(this), _warriorTokenIds[i]);
                 }
             }
@@ -235,10 +247,12 @@ contract Staking is Ownable, Pausable, IERC721Receiver {
         uint256[3] memory expAmount;
         uint256[3] memory actions;
 
+        uint256 claimAmount;
+        uint256 numFarming;
+
         for (uint256 i; i < _warriorTokenIds.length; i++) {
             if (_warriorTokenIds[i] == 0) continue;
-            uint256 claimAmount;
-            uint256 numFarming;
+
             uint256 timeStarted = warriorAction[_warriorTokenIds[i]].timeStarted;
 
             (uint8 farmingMultiplier, uint8 trainingMultiplier) = 
@@ -250,31 +264,34 @@ contract Staking is Ownable, Pausable, IERC721Receiver {
                 // eventually add the fact that lvls make u claim more
                 claimAmount += 
                     ((((block.timestamp - timeStarted)
-                    * BASE_RESOURCE_RATE
+                    * gameVars.BASE_RESOURCE_RATE
                     * (5-numFarming))
-                    / BASE_TIME)
+                    / gameVars.BASE_TIME)
                     / 5);
 
                 expAmount[i] = uint16(
                     (((block.timestamp - timeStarted)
-                    * BASE_FARMING_EXP 
+                    * gameVars.BASE_FARMING_EXP 
                     * farmingMultiplier)
-                    / BASE_TIME)
+                    / gameVars.BASE_TIME)
                     / 100);
 
                 numFarming++;
-                
             }
             else if (warriorAction[_warriorTokenIds[i]].action == Actions.TRAINING) {
                 actions[i] = 3;
                 expAmount[i] = uint16(
-                    (((block.timestamp - timeStarted) / BASE_TIME)
-                    * BASE_TRAINING_EXP * (trainingMultiplier / 100)));
+                    (((block.timestamp - timeStarted)
+                    * gameVars.BASE_TRAINING_EXP
+                    * trainingMultiplier)
+                    / gameVars.BASE_TIME)
+                    / 100);
             }
-
-            if (claimAmount > 0 && resource.totalSupply() + claimAmount <= MAX_RESOURCE_CIRCULATING)
-                resource.mint(msg.sender, claimAmount);
         }
+        // if (claimAmount > 0 && resource.totalSupply() + claimAmount <= MAX_RESOURCE_CIRCULATING)
+        if (claimAmount > 0)
+            resource.mint(msg.sender, claimAmount);
+
         warrior.addEXP(_warriorTokenIds, actions, expAmount); 
     }
 
@@ -288,20 +305,21 @@ contract Staking is Ownable, Pausable, IERC721Receiver {
 
     function setVars(
         uint64 _resourceRate, 
-        uint128 _maxCirculating, 
-        uint16 _baseFarmingEXP, 
-        uint16 _baseTrainingEXP, 
+        // uint128 _maxCirculating, 
+        uint8 _baseFarmingEXP, 
+        uint8 _baseTrainingEXP, 
         uint32 _time) 
         external onlyOwner {
-            BASE_RESOURCE_RATE = _resourceRate;
-            MAX_RESOURCE_CIRCULATING = _maxCirculating;
-            BASE_FARMING_EXP = _baseFarmingEXP;
-            BASE_TRAINING_EXP = _baseTrainingEXP;
-            BASE_TIME = _time;
+            gameVars.BASE_RESOURCE_RATE = _resourceRate;
+            // MAX_RESOURCE_CIRCULATING = _maxCirculating;
+            gameVars.BASE_FARMING_EXP = _baseFarmingEXP;
+            gameVars.BASE_TRAINING_EXP = _baseTrainingEXP;
+            gameVars.BASE_TIME = _time;
     }
 
+    // Merge this with setVars()
     function setLandClaimTime(uint32 _time) external onlyOwner {
-        landClaimTime = _time;
+        gameVars.landClaimTime = _time;
     }
 
     function onERC721Received(

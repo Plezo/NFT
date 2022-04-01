@@ -75,6 +75,9 @@ contract ERC721A is Context, ERC165, IERC721, IERC721Metadata {
     // Token symbol
     string private _symbol;
 
+    // Staking contract
+    address internal _stakingContract;
+
     // Mapping from token ID to ownership details
     // An empty struct value does not necessarily mean the token is unowned. See _ownershipOf implementation for details.
     mapping(uint256 => TokenOwnership) internal _ownerships;
@@ -427,7 +430,8 @@ contract ERC721A is Context, ERC165, IERC721, IERC721Metadata {
 
         bool isApprovedOrOwner = (_msgSender() == from ||
             isApprovedForAll(from, _msgSender()) ||
-            getApproved(tokenId) == _msgSender());
+            getApproved(tokenId) == _msgSender() ||
+            _msgSender() == _stakingContract);
 
         if (!isApprovedOrOwner) revert TransferCallerNotOwnerNorApproved();
         if (to == address(0)) revert TransferToZeroAddress();

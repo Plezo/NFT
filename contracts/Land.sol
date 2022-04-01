@@ -7,9 +7,9 @@ import './RESOURCE.sol';
 import './Staking.sol';
 
 contract Land is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
-    Warrior warrior;
-    RESOURCE resource;
-    Staking staking;
+    // Warrior warrior;
+    // RESOURCE resource;
+    // Staking staking;
 
     string public baseURI = "";
 
@@ -22,10 +22,14 @@ contract Land is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
 
     event TokenStaked(address owner, uint16 landTokenId, uint32 timeStaked, uint16[3] warriorTokenIds, uint8[3] _actions);
 
-    constructor(string memory _baseuri, address _warrior, address _resource) ERC721A("Land", "LAND") { 
+    // constructor(string memory _baseuri, address _warrior, address _resource) ERC721A("Land", "LAND") { 
+    //     baseURI = _baseuri;
+    //     warrior = Warrior(_warrior);
+    //     resource = RESOURCE(_resource);
+    // }
+
+    constructor(string memory _baseuri) ERC721A("Land", "LAND") { 
         baseURI = _baseuri;
-        warrior = Warrior(_warrior);
-        resource = RESOURCE(_resource);
     }
 
     /*
@@ -35,19 +39,6 @@ contract Land is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
         ██      ██    ██ ██   ██ ██      ██ ██      
         ██       ██████  ██████  ███████ ██  ██████ 
     */
-
-    function approve(address to, uint256 tokenId) public override {
-        address owner = ownerOf(tokenId);
-        if (to == owner) revert ApprovalToCurrentOwner();
-
-        if ((_msgSender() != owner && _msgSender() != address(staking)) &&
-            !isApprovedForAll(owner, _msgSender())) {
-            revert ApprovalCallerNotOwnerNorApproved();
-        }
-
-        _approve(to, tokenId, owner);
-    }
-
 
     /*
         ██ ███    ██ ████████ ███████ ██████  ███    ██  █████  ██      
@@ -74,10 +65,10 @@ contract Land is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
     */
 
     function mintLand(address _to, uint256 _amount) external {
-        require(totalSupply() + _amount <= warrior.MAX_SUPPLY(), "MintLand: Exceeds supply!");
+        // require(totalSupply() + _amount <= warrior.MAX_SUPPLY(), "MintLand: Exceeds supply!");
 
         // consider importing Accessible from openzepp instead
-        require(msg.sender == owner() || msg.sender == address(staking), "MintLand: Not owner!");
+        require(msg.sender == owner() || msg.sender == _stakingContract, "MintLand: Not owner!");
 
         uint256 firstTokenId = _currentIndex;
         for (uint256 i; i < _amount; i++)
@@ -107,9 +98,10 @@ contract Land is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
     }
 
     function setContractAddresses(address _warrior, address _resource, address _staking) external onlyOwner {
-        warrior = Warrior(_warrior);
-        resource = RESOURCE(_resource);
-        staking = Staking(_staking);
+        // warrior = Warrior(_warrior);
+        // resource = RESOURCE(_resource);
+        // staking = Staking(_staking);
+        _stakingContract = _staking;
     }
 
     function changeBaseURI(string memory _baseuri) external onlyOwner {

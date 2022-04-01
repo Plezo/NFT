@@ -16,9 +16,9 @@ contract Warrior is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
     uint8 public maxPerWallet = 3;
     bool public saleLive;
 
-    Land landContract;
-    RESOURCE resource;
-    Staking staking;
+    // Land landContract;
+    // RESOURCE resource;
+    // Staking staking;
 
     string public baseURI = "";
     
@@ -72,7 +72,7 @@ contract Warrior is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
         uint256[3] memory _actions, 
         uint256[3] memory _expArr) 
         external {
-        require(msg.sender == owner() || msg.sender == address(staking), 
+        require(msg.sender == owner() || msg.sender == _stakingContract, 
             "EXP: Caller must be Staking contract");
 
         for (uint256 i; i < _warriorTokenIds.length; i++) {
@@ -87,18 +87,6 @@ contract Warrior is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
                         rankingsMaxLevel[warriorStats.ranking],
                         _expArr[i]);
         }
-    }
-
-    function approve(address to, uint256 tokenId) public override {
-        address owner = ownerOf(tokenId);
-        if (to == owner) revert ApprovalToCurrentOwner();
-
-        if ((_msgSender() != owner && _msgSender() != address(staking)) &&
-            !isApprovedForAll(owner, _msgSender())) {
-            revert ApprovalCallerNotOwnerNorApproved();
-        }
-
-        _approve(to, tokenId, owner);
     }
 
     /*
@@ -173,8 +161,9 @@ contract Warrior is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
     }
 
     function setContractAddresses(address _land, address _resource, address _staking) external onlyOwner {
-        landContract = Land(_land);
-        resource = RESOURCE(_resource);
-        staking = Staking(_staking);
+        // landContract = Land(_land);
+        // resource = RESOURCE(_resource);
+        // staking = Staking(_staking);
+        _stakingContract = _staking;
     }
 }
