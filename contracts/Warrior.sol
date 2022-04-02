@@ -98,6 +98,16 @@ contract Warrior is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
         }
     }
 
+    function getWarriorStats(uint256 _warriorTokenId) external view returns(uint256, uint256, uint256, uint256, uint256) {
+        return (
+            stats[_warriorTokenId].ranking,
+            stats[_warriorTokenId].trainingLVL,
+            stats[_warriorTokenId].farmingLVL,
+            stats[_warriorTokenId].trainingEXP,
+            stats[_warriorTokenId].farmingEXP
+        );
+    }
+
     /*
         ██ ███    ██ ████████ ███████ ██████  ███    ██  █████  ██      
         ██ ████   ██    ██    ██      ██   ██ ████   ██ ██   ██ ██      
@@ -118,14 +128,15 @@ contract Warrior is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
 
     function _generateRankings(uint256[3] memory tokenIds) internal {
         for (uint256 i; i < tokenIds.length; i++) {
-            uint256 ranking;
+            uint8 ranking;
             uint256 randNum = _generateRandNum(tokenIds[i]);
+
             if (randNum % 100 == 0) ranking = 4;     // 1%
             else if (randNum % 10 == 0) ranking = 3; // 10%
             else if (randNum % 5 == 0) ranking = 2;  // 20%
             else ranking = 1;
 
-            stats[tokenIds[i]] = WarriorStats(uint8(ranking), 0, 0, 0, 0);
+            stats[tokenIds[i]] = WarriorStats(ranking, 1, 1, 0, 0);
         }
     }
 

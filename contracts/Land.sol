@@ -32,7 +32,7 @@ contract Land is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
         ██       ██████  ██████  ███████ ██  ██████ 
     */
 
-    function getStats(uint256 tokenId) external view returns(uint8, uint8) {
+    function getLandStats(uint256 tokenId) external view returns(uint8, uint8) {
         return (stats[tokenId].farmingMultiplier, stats[tokenId].trainingMultiplier);
     }
 

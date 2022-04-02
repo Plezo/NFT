@@ -35,7 +35,6 @@ describe("Staking", function () {
         resource = await RESOURCE.deploy();
 
         const Land = await ethers.getContractFactory("Land");
-        // land = await Land.deploy("", warrior.address, resource.address);
         land = await Land.deploy("");
 
 
@@ -45,9 +44,17 @@ describe("Staking", function () {
         await warrior.connect(owner).flipSaleState();
         await warrior.connect(owner).addGameContract(staking.address);
         await land.connect(owner).addGameContract(staking.address);
-        await staking.connect(owner).setLandClaimTime(0);
+        
+        /*
+        BASE_RESOURCE_RATE:         10 ether,
+        BASE_FARMING_EXP:           120,
+        BASE_TRAINING_EXP:          10,
+        BASE_TIME:                  1 seconds, (1 days = 86400)
+        LAND_CLAIM_TIME:            0 seconds
+        */
+        await staking.connect(owner).setVars(ethers.utils.parseEther("10"), 120, 10, 1, 0);
+        
         await resource.connect(owner).editGameMasters([staking.address], [true]);
-        // await staking.connect(owner).setVars(ethers.utils.parseEther("10"), ethers.utils.parseEther("1000000"), 120, 10, 1);
 
         // need to mint 0 due to issues with code (idk if I need to "fix")
         await warrior.connect(owner).publicMint(1);
