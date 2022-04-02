@@ -43,8 +43,8 @@ describe("Staking", function () {
         staking = await Staking.deploy(warrior.address, land.address, resource.address);
 
         await warrior.connect(owner).flipSaleState();
-        await warrior.connect(owner).setContractAddresses(land.address, resource.address, staking.address);
-        await land.connect(owner).setContractAddresses(warrior.address, resource.address, staking.address);
+        await warrior.connect(owner).addGameContract(staking.address);
+        await land.connect(owner).addGameContract(staking.address);
         await staking.connect(owner).setLandClaimTime(0);
         await resource.connect(owner).editGameMasters([staking.address], [true]);
         // await staking.connect(owner).setVars(ethers.utils.parseEther("10"), ethers.utils.parseEther("1000000"), 120, 10, 1);

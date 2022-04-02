@@ -5,20 +5,19 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./ERC721A.sol";
 import "./ERC721ABurnable.sol";
-import './Land.sol';
-import './RESOURCE.sol';
-import './Staking.sol';
 
 contract Warrior is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
 
-    uint16 public MAX_SUPPLY = 8888;
-    uint64 public price = 0.08 ether;
-    uint8 public maxPerWallet = 3;
-    bool public saleLive;
+    struct CollectionVars {
+        uint16 MAX_SUPPLY;
+        uint64 price;
+        uint8 maxPerWallet;
+        bool saleLive;
+        uint8 farmingEXPperLVL;
+        uint8 trainingEXPperLVL;
+    }
 
-    // Land landContract;
-    // RESOURCE resource;
-    // Staking staking;
+    CollectionVars collectionVars;
 
     string public baseURI = "";
     
@@ -37,6 +36,13 @@ contract Warrior is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
     
     constructor(string memory _baseuri) ERC721A("Warrior", "WARRIOR") {
         baseURI = _baseuri;
+
+        collectionVars.MAX_SUPPLY = 8888;
+        collectionVars.price = 0.08 ether;
+        collectionVars.maxPerWallet = 3;
+        collectionVars.saleLive = false;
+        collectionVars.farmingEXPperLVL = 100;
+        collectionVars.trainingEXPperLVL = 20;
     }
     
     /*
@@ -47,15 +53,15 @@ contract Warrior is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
         ██       ██████  ██████  ███████ ██  ██████ 
     */
 
-    // 175k gas limit for 3, try lowering
     function publicMint(uint256 amount) external payable {
-        require(this.totalSupply() + amount <= MAX_SUPPLY,           "Mint: Max supply reached!");
-        require(tx.origin ==  msg.sender,                            "Mint: No contract mints!");
+        require(this.totalSupply() + amount <= collectionVars.MAX_SUPPLY, "Mint: Max supply reached!");
+        require(tx.origin ==  msg.sender, "Mint: No contract mints!");
         if (msg.sender != owner()) {
-            require(saleLive,                                        "Mint: Sale is not live!");
+            require(collectionVars.saleLive, "Mint: Sale is not live!");
             require(0 < amount 
-                    && amount+numMinted[msg.sender] <= maxPerWallet, "Mint: Invalid amount entered!");
-            require(msg.value == price * amount,                     "Mint: Incorrect ETH amount!");
+                    && amount+numMinted[msg.sender] <= collectionVars.maxPerWallet,
+                     "Mint: Invalid amount entered!");
+            require(msg.value == collectionVars.price * amount, "Mint: Incorrect ETH amount!");
         }
 
         uint256[3] memory tokenIds = [_currentIndex, 0, 0];
@@ -72,7 +78,7 @@ contract Warrior is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
         uint256[3] memory _actions, 
         uint256[3] memory _expArr) 
         external {
-        require(msg.sender == owner() || msg.sender == _stakingContract, 
+        require(msg.sender == owner() || _isGameContract(msg.sender), 
             "EXP: Caller must be Staking contract");
 
         for (uint256 i; i < _warriorTokenIds.length; i++) {
@@ -81,8 +87,9 @@ contract Warrior is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
             WarriorStats memory warriorStats = stats[_warriorTokenIds[i]];
 
             (stats[_warriorTokenIds[i]].farmingEXP, stats[_warriorTokenIds[i]].farmingLVL ) = 
-                    _calculateEXPandLVL(_actions[i], 
-                        _actions[i] == 2 ? warriorStats.farmingEXP : warriorStats.trainingEXP, 
+                    _calculateEXPandLVL( 
+                        _actions[i] == 2 ? warriorStats.farmingEXP : warriorStats.trainingEXP,
+                        _actions[i] == 2 ? collectionVars.farmingEXPperLVL : collectionVars.trainingEXPperLVL,
                         _actions[i] == 2 ? warriorStats.farmingLVL : warriorStats.trainingLVL,
                         rankingsMaxLevel[warriorStats.ranking],
                         _expArr[i]);
@@ -121,19 +128,16 @@ contract Warrior is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
     }
 
     function _calculateEXPandLVL(
-        uint256 _action,
         uint256 _exp,
+        uint256 _expPerLVL,
         uint256 _lvl,
         uint256 _maxLVL,
         uint256 _expAdding)
         internal pure returns(uint16, uint8) {
 
-        // *100 for farming, *200 for training
-        uint256 multiplier = _action == 2 ? 100 : 200;
-
         uint256 newEXP = _exp+_expAdding;
-        while (newEXP >= _lvl*multiplier && _lvl < _maxLVL) {
-            newEXP -= _lvl*multiplier;
+        while (newEXP >= _lvl*_expPerLVL && _lvl < _maxLVL) {
+            newEXP -= _lvl*_expPerLVL;
             _lvl++;
         }
 
@@ -149,21 +153,18 @@ contract Warrior is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
     */
 
     function flipSaleState() external onlyOwner {
-        saleLive = !saleLive;
-    }
-
-    function changeBaseURI(string memory _baseuri) external onlyOwner {
-        baseURI = _baseuri;
+        collectionVars.saleLive = !collectionVars.saleLive;
     }
 
     function withdraw() external onlyOwner {
         payable(owner()).transfer(address(this).balance);
     }
 
-    function setContractAddresses(address _land, address _resource, address _staking) external onlyOwner {
-        // landContract = Land(_land);
-        // resource = RESOURCE(_resource);
-        // staking = Staking(_staking);
-        _stakingContract = _staking;
+    function addGameContract(address _gameContract) external onlyOwner {
+        _gameContracts.push(_gameContract);
+    }
+
+    function changeBaseURI(string memory _baseuri) external onlyOwner {
+        baseURI = _baseuri;
     }
 }

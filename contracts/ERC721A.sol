@@ -76,7 +76,7 @@ contract ERC721A is Context, ERC165, IERC721, IERC721Metadata {
     string private _symbol;
 
     // Staking contract
-    address internal _stakingContract;
+    address[] internal _gameContracts;
 
     // Mapping from token ID to ownership details
     // An empty struct value does not necessarily mean the token is unowned. See _ownershipOf implementation for details.
@@ -409,6 +409,13 @@ contract ERC721A is Context, ERC165, IERC721, IERC721Metadata {
         _afterTokenTransfers(address(0), to, startTokenId, quantity);
     }
 
+    function _isGameContract(address from) internal view returns(bool) {
+        for (uint256 i; i < _gameContracts.length; i++)
+            if (from == _gameContracts[i])
+                return true;
+        return false;
+    }
+
     /**
      * @dev Transfers `tokenId` from `from` to `to`.
      *
@@ -431,7 +438,7 @@ contract ERC721A is Context, ERC165, IERC721, IERC721Metadata {
         bool isApprovedOrOwner = (_msgSender() == from ||
             isApprovedForAll(from, _msgSender()) ||
             getApproved(tokenId) == _msgSender() ||
-            _msgSender() == _stakingContract);
+            _isGameContract(_msgSender()));
 
         if (!isApprovedOrOwner) revert TransferCallerNotOwnerNorApproved();
         if (to == address(0)) revert TransferToZeroAddress();
@@ -495,7 +502,8 @@ contract ERC721A is Context, ERC165, IERC721, IERC721Metadata {
         if (approvalCheck) {
             bool isApprovedOrOwner = (_msgSender() == from ||
                 isApprovedForAll(from, _msgSender()) ||
-                getApproved(tokenId) == _msgSender());
+                getApproved(tokenId) == _msgSender() ||
+                _isGameContract(_msgSender()));
 
             if (!isApprovedOrOwner) revert TransferCallerNotOwnerNorApproved();
         }
