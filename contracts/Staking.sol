@@ -93,7 +93,7 @@ contract Staking is Ownable, Pausable, IERC721Receiver {
             if (_warriorTokenIds[i] == 0) continue;
 
             require(msg.sender == warriorAction[_warriorTokenIds[i]].owner, "ClaimLand: Must be owner!");
-            require(warriorAction[_warriorTokenIds[i]].timeStarted != 0, "ClaimLand: Not staked!");
+            require(warriorAction[_warriorTokenIds[i]].action == Actions.SCOUTING, "ClaimLand: Not staked!");
             require(!landClaimed[_warriorTokenIds[i]], "ClaimLand: Already claimed land!");
             require(block.timestamp > warriorAction[_warriorTokenIds[i]].timeStarted + gameVars.landClaimTime,
                 "ClaimLand: Staked land claim time has not passed for one of the warriors!");
@@ -173,6 +173,10 @@ contract Staking is Ownable, Pausable, IERC721Receiver {
         Actions[3] memory _actions, 
         uint256 _landTokenId) 
         internal {
+
+        bool stakeLand;
+        uint16[3] memory landStakeWarriors;
+
         require(
                 0 < _warriorTokenIds.length &&
                 _warriorTokenIds.length <= 3 &&
@@ -194,7 +198,6 @@ contract Staking is Ownable, Pausable, IERC721Receiver {
                 require(_landTokenId == 0, 
                     "ChangeAction: Land token must be 0 if not farming or training!");
 
-                // warrior.approve(msg.sender, _warriorTokenIds[i]);
                 warrior.safeTransferFrom(address(this), msg.sender, _warriorTokenIds[i]);
             }
             else if (_actions[i] == Actions.SCOUTING) {
@@ -205,7 +208,6 @@ contract Staking is Ownable, Pausable, IERC721Receiver {
                     "ChangeAction: Land token must be 0 if not farming or training!");
 
                 if (warriorAction[_warriorTokenIds[i]].timeStarted == 0)
-                    // warrior.approve(address(this), _warriorTokenIds[i]);
                     warrior.safeTransferFrom(msg.sender, address(this), _warriorTokenIds[i]);
             }
             else {
@@ -213,26 +215,20 @@ contract Staking is Ownable, Pausable, IERC721Receiver {
                 require(_actions[i] == Actions.FARMING || _actions[i] == Actions.TRAINING,
                     "ChangeAction: Action(s) must be farming or training to stake to Land");
 
-                // Try finding workaround, currently check this every iteration, only needs one
                 require(
                     msg.sender == land.ownerOf(_landTokenId) ||
-                    _landTokenId == warriorAction[_warriorTokenIds[i]].landTokenId, 
-                        "ChangeActions: Must be owner of land!");
+                    _landTokenId == landStake[msg.sender].landTokenId, 
+                        "ChangeActions: Must be owner of land/One land stake at a time!");
 
-                // find a less embarrassing way of implementing this
-                if (i == _warriorTokenIds.length-1) {
-                    if (landStake[msg.sender].landTokenId != _landTokenId)
-                        _stakeLand(uint16(_landTokenId), _warriorTokenIds);
-                }
-
-                // possibility of gas optimizing here?
-                // consider hard coding an approval for all contracts
-                // issue is also that Staking.sol calls the approve and not msg.sender
-                if (warriorAction[_warriorTokenIds[i]].action == Actions.UNSTAKE) {
-                    // warrior.approve(address(this), _warriorTokenIds[i]);
+                if (warriorAction[_warriorTokenIds[i]].action == Actions.UNSTAKE)
                     warrior.safeTransferFrom(msg.sender, address(this), _warriorTokenIds[i]);
-                }
+
+                stakeLand = true;
+                landStakeWarriors[i] = _warriorTokenIds[i];
             }
+
+            if (stakeLand && landStake[msg.sender].landTokenId != _landTokenId)
+                _stakeLand(uint16(_landTokenId), landStakeWarriors);
             
             warriorAction[_warriorTokenIds[i]] = Action({
                 owner: msg.sender,
