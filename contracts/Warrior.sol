@@ -37,12 +37,14 @@ contract Warrior is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
     constructor(string memory _baseuri) ERC721A("Warrior", "WARRIOR") {
         baseURI = _baseuri;
 
-        collectionVars.MAX_SUPPLY = 8888;
-        collectionVars.price = 0.08 ether;
-        collectionVars.maxPerWallet = 3;
-        collectionVars.saleLive = false;
-        collectionVars.farmingEXPperLVL = 100;
-        collectionVars.trainingEXPperLVL = 20;
+        collectionVars = CollectionVars({
+            MAX_SUPPLY: 8888,
+            price: 0.08 ether,
+            maxPerWallet: 3,
+            saleLive: false,
+            farmingEXPperLVL: 100,
+            trainingEXPperLVL: 20
+        });
     }
     
     /*
