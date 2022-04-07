@@ -40,6 +40,7 @@ async function main() {
     BASE_TIME:                  1 seconds, (1 days = 86400)
     LAND_CLAIM_TIME:            0 seconds
     */
+   
     // Changes vars to easier ones (TESTING PURPOSES ONLY!)
     await staking.connect(owner).setVars(ethers.utils.parseEther("10"), 120, 10, 1, 0);
     await resource.connect(owner).editGameMasters([staking.address], [true]);
