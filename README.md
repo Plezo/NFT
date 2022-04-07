@@ -1,4 +1,4 @@
-# KingdomsNFT DEV
+# NFT DEV
 
 When using this code use an empty wallet so: 1. we stay anonymous and 2. you dont accidentally deploy to mainnet
 
