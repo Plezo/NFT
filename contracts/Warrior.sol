@@ -17,7 +17,7 @@ contract Warrior is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
         uint8 trainingEXPperLVL;
     }
 
-    CollectionVars collectionVars;
+    CollectionVars public collectionVars;
 
     string public baseURI = "";
     
@@ -67,9 +67,9 @@ contract Warrior is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
         }
 
         uint256[3] memory tokenIds = [_currentIndex, 0, 0];
-        for (uint256 i = 1; i < amount; i++) {
+        for (uint256 i = 1; i < amount; i++)
             tokenIds[i] = tokenIds[0]+1;
-        }
+            
         _generateRankings(tokenIds);
         numMinted[msg.sender] += amount;
         _safeMint(msg.sender, amount);

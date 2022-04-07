@@ -24,7 +24,6 @@ contract Staking is Ownable, Pausable, IERC721Receiver {
 
     GameVars gameVars;
 
-
     enum Actions { UNSTAKE, SCOUTING, FARMING, TRAINING }
 
     // Stores staking info for warriors
@@ -183,7 +182,7 @@ contract Staking is Ownable, Pausable, IERC721Receiver {
                 0 < _warriorTokenIds.length &&
                 _warriorTokenIds.length <= 3 &&
                 _warriorTokenIds.length == _actions.length,
-                    "ChangeAction: Invalid # of actions/warriors");
+                    "ChangeActions: Invalid # of actions/warriors");
 
         for (uint256 i; i < _warriorTokenIds.length; i++) {
             if (_warriorTokenIds[i] == 0) continue;
@@ -191,10 +190,10 @@ contract Staking is Ownable, Pausable, IERC721Receiver {
             require(
                 msg.sender == warrior.ownerOf(_warriorTokenIds[i]) ||
                 msg.sender == warriorAction[_warriorTokenIds[i]].owner,
-                    "ChangeAction: Must be owner of warrior(s)!");
+                    "ChangeActions: Must be owner of warrior(s)!");
 
             require(_actions[i] != warriorAction[_warriorTokenIds[i]].action, 
-                    "ChangeAction: Already performing that action!");
+                    "ChangeActions: Already performing that action!");
 
             if (_actions[i] == Actions.UNSTAKE) {
 
@@ -208,7 +207,7 @@ contract Staking is Ownable, Pausable, IERC721Receiver {
             }
             else if (_actions[i] == Actions.SCOUTING) {
                 require(!landClaimed[_warriorTokenIds[i]], 
-                    "ChangeAction: Land already claimed for token!");
+                    "ChangeActions: Land already claimed for token!");
 
                 // Unstakes from land if its staked
                 if (landStake[msg.sender].landTokenId != 0)
@@ -223,7 +222,7 @@ contract Staking is Ownable, Pausable, IERC721Receiver {
             else {
                 // not sure if possible to have anything else
                 require(_actions[i] == Actions.FARMING || _actions[i] == Actions.TRAINING,
-                    "ChangeAction: Action(s) must be farming or training to stake to Land");
+                    "ChangeActions: Action(s) must be farming or training to stake to Land");
 
                 require(
                     msg.sender == land.ownerOf(_landTokenId) ||

@@ -11,7 +11,7 @@ function at100Gwei(gasLimit) {
 
 // dont forget to mint token #0 for owner
 
-describe("Staking", function () {
+describe("Game pipeline", function () {
     let price = 0.08;
     let amount = 3;
 
@@ -24,7 +24,58 @@ describe("Staking", function () {
     let addr2;
     let addrs;
 
-    // `beforeEach` will run before each test, re-deploying the contract every time
+    async function mintWarriors(amountWarriors) {
+        await warrior.connect(addr1).publicMint(amountWarriors, 
+            {value: ethers.utils.parseEther(`${price*amountWarriors}`)});
+        await warrior.connect(addr2).publicMint(amountWarriors, 
+            {value: ethers.utils.parseEther(`${price*amountWarriors}`)});
+    }
+
+    async function scoutWarriors() {
+        await staking.connect(addr1).changeActions([1, 2, 3], [1, 1, 1], 0);
+        await staking.connect(addr2).changeActions([4, 5, 6], [1, 1, 1], 0);
+    }
+
+    async function claimLand() {
+        await staking.connect(addr1).claimLand([1, 2, 3]);
+        await staking.connect(addr2).claimLand([4, 5, 6]);
+    }
+
+    async function farmWarriors() {
+        await staking.connect(addr1).changeActions([1, 2, 3], [2, 2, 2], 1);
+        await staking.connect(addr2).changeActions([4, 5, 6], [2, 2, 2], 4);
+    }
+
+    async function claimFarming() {
+        await staking.connect(addr1).claim([1, 2, 3]);
+        await staking.connect(addr2).claim([4, 5, 6]);
+    }
+
+    async function printGasLimits() {
+        const gasLimitMint = (await warrior.connect(addr1).estimateGas.publicMint(amount, {value: ethers.utils.parseEther(`${price*amount}`)})).toNumber()
+        console.log(`Mint ${amount} gas limit:`, gasLimitMint, "\nGas cost @ 100gwei:", at100Gwei(gasLimitMint));
+        await mintWarriors(amount);
+
+        const gasLimitScout = (await staking.connect(addr1).estimateGas.changeActions([1, 2, 3], [1, 1, 1], 0)).toNumber();
+        console.log("Change action scouting gas limit:", gasLimitScout, "\nGas cost @ 100gwei:", at100Gwei(gasLimitScout));
+        await scoutWarriors();
+
+        const gasLimitClaimLand = (await staking.connect(addr1).estimateGas.claimLand([1, 2, 3])).toNumber();
+        console.log("Claim Land gas limit:", gasLimitClaimLand, "\nGas cost @ 100gwei:", at100Gwei(gasLimitClaimLand));
+        await claimLand();
+
+        const gasLimitChangeActions = (await staking.connect(addr1).estimateGas.changeActions([1, 2, 3], [2, 2, 2], 1)).toNumber();
+        console.log("Change action farming gas limit:", gasLimitChangeActions, "\nGas cost @ 100gwei:", at100Gwei(gasLimitChangeActions));
+        await farmWarriors();
+
+        await sleep(10000); // 10 seconds
+
+        const gasLimitclaim = (await staking.connect(addr1).estimateGas.claim([1, 2, 3])).toNumber();
+        console.log("Claim gas limit:", gasLimitclaim, "\nGas cost @ 100gwei:", at100Gwei(gasLimitclaim));
+        await claimFarming();
+    }
+
+    // `beforeEach` will run before each test, re-deploying the contracts every time
     beforeEach(async function () {
         [owner, addr1, addr2, ...addrs] = await ethers.getSigners();
 
@@ -53,7 +104,6 @@ describe("Staking", function () {
         LAND_CLAIM_TIME:            0 seconds
         */
         await staking.connect(owner).setVars(ethers.utils.parseEther("10"), 120, 10, 1, 0);
-        
         await resource.connect(owner).editGameMasters([staking.address], [true]);
 
         // need to mint 0 due to issues with code (idk if I need to "fix")
@@ -66,46 +116,42 @@ describe("Staking", function () {
         console.log("Addr1 address:", addr1.address);
     });
 
-    describe("Warrior Contract", function () {
-        it("Should mint, stake (scouting) warrior(s) and claim land", async function () {
-            // Mints and stakes warriors
-            // owner minted warrior #0 and burned it
-            // addr1 will own warrior # 1, 2, 3
-            // addr2 will own warrior # 4, 5, 6
+    describe("Game pipeline", function () {
+        it("Should mint only when eligible", async function () {
+            await warrior.connect(owner).flipSaleState();
+            await expect(
+                warrior.connect(addr1).publicMint(amount, 
+                    {value: ethers.utils.parseEther(`${price*amount}`)}
+                )
+            ).to.be.reverted;
+            await warrior.connect(owner).flipSaleState();
 
-            const gasLimitMint = (await warrior.connect(addr1).estimateGas.publicMint(amount, {value: ethers.utils.parseEther(`${price*amount}`)})).toNumber()
-            console.log(`Mint ${amount} gas limit:`, gasLimitMint, "\nGas cost @ 100gwei:", at100Gwei(gasLimitMint));
-            await warrior.connect(addr1).publicMint(amount, {value: ethers.utils.parseEther(`${price*amount}`)});
-            await warrior.connect(addr2).publicMint(amount, {value: ethers.utils.parseEther(`${price*amount}`)});
-
-            // Should successfully mint warriors to the two wallets
+            await mintWarriors(amount);
             expect(await warrior.totalSupply()).to.equal(amount*2);
-            expect(await warrior.balanceOf(addr1.address)).to.equal(3);
-            expect(await warrior.balanceOf(addr2.address)).to.equal(3);
+            expect(await warrior.balanceOf(addr1.address)).to.equal(amount);
+            expect(await warrior.balanceOf(addr2.address)).to.equal(amount);
+        })
 
-            await sleep(1000); // 10 seconds
+        it("Should make warriors scout and claim land", async function () {
+            // Mints warriors
+            await mintWarriors(amount);
 
             // Stakes warriors for scouting
+            await scoutWarriors();
 
-            const gasLimitScout = (await staking.connect(addr1).estimateGas.changeActions([1, 2, 3], [1, 1, 1], 0)).toNumber();
-            console.log("Change action scouting gas limit:", gasLimitScout, "\nGas cost @ 100gwei:", at100Gwei(gasLimitScout));
-            await staking.connect(addr1).changeActions([1, 2, 3], [1, 1, 1], 0);
-            await staking.connect(addr2).changeActions([4, 5, 6], [1, 1, 1], 0);
-
-            // Wallets should be empty since its staked in staking address
+            // All warriors should be in staking contract
             expect(await warrior.balanceOf(addr1.address)).to.equal(0);
             expect(await warrior.balanceOf(addr2.address)).to.equal(0);
             expect(await warrior.balanceOf(staking.address)).to.equal(amount*2);
 
-            // Claims land after scouting
-            // owner burnt land #0
-            // addr1 will own land # 1, 2, 3
-            // addr2 will own land # 4, 5, 6
+            // Attempts to claim land if time is not reached (should revert)
+            // Changes land claim time to day to check if reverts
+            await staking.connect(owner).setVars(ethers.utils.parseEther("10"), 120, 10, 1, 86400);
+            await expect(staking.connect(addr1).claimLand([1, 2, 3])).to.be.reverted;
+            await staking.connect(owner).setVars(ethers.utils.parseEther("10"), 120, 10, 1, 0);
 
-            const gasLimitClaimLand = (await staking.connect(addr1).estimateGas.claimLand([1, 2, 3])).toNumber();
-            console.log("Claim Land gas limit:", gasLimitClaimLand, "\nGas cost @ 100gwei:", at100Gwei(gasLimitClaimLand));
-            await staking.connect(addr1).claimLand([1, 2, 3]);
-            await staking.connect(addr2).claimLand([4, 5, 6]);
+            // Claims land
+            await claimLand();
 
             // Land should be in addr1 and addr2 wallets
             expect(await land.totalSupply()).to.equal(amount*2);
@@ -116,21 +162,48 @@ describe("Staking", function () {
             expect(await warrior.balanceOf(addr1.address)).to.equal(amount);
             expect(await warrior.balanceOf(addr2.address)).to.equal(amount);
 
-            // Stakes land and the three warriors
-            // addr1 stakes all their tokens as FARMING ([2, 2, 2])
-            const gasLimitChangeActions = (await staking.connect(addr1).estimateGas.changeActions([1, 2, 3], [2, 2, 2], 1)).toNumber();
-            console.log("Change action farming gas limit:", gasLimitChangeActions, "\nGas cost @ 100gwei:", at100Gwei(gasLimitChangeActions));
-            await staking.connect(addr1).changeActions([1, 2, 3], [2, 2, 2], 1);
+            // Check if landClaimed is updated properly
+            expect(await staking.landClaimed(1) == true);
+        })
 
-            await sleep(1000); // 10 seconds
+        it("Should successfully make warriors farm and claim rewards", async function () {
+            await mintWarriors(amount);
+            await scoutWarriors();
+            await claimLand();
 
-            const gasLimitclaim = (await staking.connect(addr1).estimateGas.claim([1, 2, 3])).toNumber();
-            console.log("Claim gas limit:", gasLimitclaim, "\nGas cost @ 100gwei:", at100Gwei(gasLimitclaim));
-            await staking.connect(addr1).claim([1, 2, 3]);
+            await farmWarriors();
 
-            console.log("# of resource:", ethers.utils.formatEther(await resource.balanceOf(addr1.address)));
-            console.log("Land stats:", await land.stats(1));
+            await sleep(10000); // 10 seconds
+
+            await claimFarming();
+
+            // Balances should update correctly
+            expect(await warrior.balanceOf(addr1.address)).to.equal(0);
+            expect(await warrior.balanceOf(addr2.address)).to.equal(0);
+            expect(await warrior.balanceOf(staking.address)).to.equal(amount*2);
+            expect(await land.balanceOf(addr1.address)).to.equal(amount-1);
+            expect(await land.balanceOf(addr2.address)).to.equal(amount-1);
+            expect(await land.balanceOf(staking.address)).to.equal(2);
+
+            // Check if warriorAction is updated correctly
+            expect(await staking.warriorAction(1).owner == addr1.address);
+            expect(await staking.warriorAction(1).action == 2);
+            expect(await staking.warriorAction(1).landTokenId == 1);
+
+            // Check if landStake is updated correctly
+            expect(await staking.landStake(addr1.address).landTokenId == 1);
+            expect(await staking.landStake(addr1.address).warriorTokenIds == [1, 2, 3]);
+
+            // Check if any resource is minted
+            expect(await resource.balanceOf(addr1.address) >= 0);
+        })
+
+        it("Should perform entire game pipeline and output gas limits", async function () {
+            await printGasLimits();
+            console.log("# of resource:", 
+                ethers.utils.formatEther(await resource.balanceOf(addr1.address)))
+
             console.log(await warrior.stats(1));
-        });
+        })
     });
 });
