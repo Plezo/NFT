@@ -51,6 +51,8 @@ async function main() {
     await warrior.connect(owner).burn(0);
     await land.connect(owner).burn(0);
 
+    console.log("Warrior address:", warrior.address);
+    console.log("Land address:", land.address);
     console.log("Staking address:", staking.address);
     console.log("Owner address:", owner.address);
     console.log("Addr1 address:", addr1.address);
