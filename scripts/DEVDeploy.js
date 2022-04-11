@@ -56,6 +56,10 @@ async function main() {
     console.log("Staking address:", staking.address);
     console.log("Owner address:", owner.address);
     console.log("Addr1 address:", addr1.address);
+
+    // for metadata development
+    await warrior.connect(owner).publicMint(10);
+    await land.connect(owner).mintLand(owner.address, 10);
 }
 
 main()

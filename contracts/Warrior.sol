@@ -38,7 +38,7 @@ contract Warrior is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
         baseURI = _baseuri;
 
         collectionVars = CollectionVars({
-            MAX_SUPPLY: 8888,
+            MAX_SUPPLY: 10000,
             price: 0.08 ether,
             maxPerWallet: 3,
             saleLive: false,
@@ -66,9 +66,9 @@ contract Warrior is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
             require(msg.value == collectionVars.price * amount, "Mint: Incorrect ETH amount!");
         }
 
-        uint256[3] memory tokenIds = [_currentIndex, 0, 0];
-        for (uint256 i = 1; i < amount; i++)
-            tokenIds[i] = tokenIds[0]+1;
+        uint256[] memory tokenIds = new uint256[](amount);
+        for (uint256 i = 0; i < amount; i++)
+            tokenIds[i] = _currentIndex+i;
             
         _generateRankings(tokenIds);
         numMinted[msg.sender] += amount;
@@ -126,14 +126,14 @@ contract Warrior is ERC721A, ERC721ABurnable, Ownable, ReentrancyGuard {
         return(uint256(keccak256(abi.encode(seed, tokenId))));
     }
 
-    function _generateRankings(uint256[3] memory tokenIds) internal {
+    function _generateRankings(uint256[] memory tokenIds) internal {
         for (uint256 i; i < tokenIds.length; i++) {
             uint8 ranking;
             uint256 randNum = _generateRandNum(tokenIds[i]);
 
-            if (randNum % 100 == 0) ranking = 4;     // 1%
-            else if (randNum % 10 == 0) ranking = 3; // 10%
-            else if (randNum % 5 == 0) ranking = 2;  // 20%
+            if ((randNum % 100) <= 2) ranking = 4;          // 2%
+            else if ((randNum % 100) <= 22) ranking = 3;    // 20%
+            else if ((randNum % 100) <= 57) ranking = 2;    // 35%
             else ranking = 1;
 
             stats[tokenIds[i]] = WarriorStats(ranking, 1, 1, 0, 0);
