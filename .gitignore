@@ -8,3 +8,7 @@ package-lock.json
 #Hardhat files
 cache
 artifacts
+
+#Metadata
+metadata/warriors
+metadata/land
