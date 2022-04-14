@@ -1,6 +1,7 @@
-const { ethers } = require("hardhat");
+const { ethers } = require('hardhat');
 const fs = require('fs');
-const warriorsPath = './metadata/warriors';
+const sharp = require('sharp')
+const warriorJSON = './metadata/warriors/metadataJSON';
 
 const Weapons = [
     [...Array(35).keys()],  // Rank 1
@@ -48,7 +49,7 @@ function randomInt(min, max) {
 
 // Returns the next ungenerated tokenID
 function nextOneToGenerate() {
-    let next = fs.readdirSync(warriorsPath).length+1;
+    let next = fs.readdirSync(warriorJSON).length+1;
     if (next == 0) 
         next = 1;
 
@@ -58,7 +59,7 @@ function nextOneToGenerate() {
 // Creates json file for given tokenID
 function writeToJSON(JSONObj) {
     let JSONStr = JSON.stringify(JSONObj, null, '\t');
-    fs.writeFileSync(`${warriorsPath}/${JSONObj['TokenID']}.json`, JSONStr, 'utf8');
+    fs.writeFileSync(`${warriorJSON}/${JSONObj['TokenID']}.json`, JSONStr, 'utf8');
 }
 
 // Generates metadata for each warrior
@@ -117,24 +118,12 @@ function generateWarrior(tokenId, ranking) {
                 "value": ranking
             },
             {
+                "trait-type": "Background",
+                "value": background
+            },
+            {
                 "trait-type": "Gender",
                 "value": gender == 0 ? "Male" : "Female"
-            },
-            {
-                "trait-type": "Weapon",
-                "value": weapon
-            },
-            {
-                "trait-type": "Armor",
-                "value": armor
-            },
-            {
-                "trait-type": "Headpiece",
-                "value": headpiece
-            },
-            {
-                "trait-type": "Hair",
-                "value": hair
             },
             {
                 "trait-type": "Eyes",
@@ -149,21 +138,87 @@ function generateWarrior(tokenId, ranking) {
                 "value": faceaccessory
             },
             {
+                "trait-type": "Weapon",
+                "value": weapon
+            },
+            {
+                "trait-type": "Hair",
+                "value": hair
+            },
+            {
+                "trait-type": "Armor",
+                "value": armor
+            },
+            {
                 "trait-type": "BodyAccessory",
                 "value": bodyaccessory
             },
             {
-                "trait-type": "TBDAccessory",
-                "value": tbdaccessory
+                "trait-type": "Headpiece",
+                "value": headpiece
             },
             {
-                "trait-type": "Background",
-                "value": background
+                "trait-type": "TBDAccessory",
+                "value": tbdaccessory
             }
         ]
     }
 
     return metadataJSONObj;
+}
+
+// Generates art with respective metadata (consider moving to python)
+async function generateArt(JSONObj) {
+    const baseDir = "./metadata/warriors/traits"
+
+    let ranking;
+    let compositeArr = [];
+    let bgImage = "";
+
+    JSONObj['Attributes'].forEach((trait) => {
+        if (trait['trait-type'] == "Ranking")
+            ranking = trait['value'];
+
+        /* ------------------------------- TESTING PURPOSES ONLY ------------------------------- */
+        else if (trait['trait-type'] == "Background")
+            bgImage = `${baseDir}/background/0.png`;
+        else if (['armor', 'headpiece', 'weapon'].includes(trait['trait-type'].toLowerCase())) {
+            compositeArr.push(
+                {
+                    input: `${baseDir}/${trait['trait-type'].toLowerCase()}/1/0.png`
+                })
+        }
+        else {
+            compositeArr.push(
+                {
+                    input: `${baseDir}/${trait['trait-type'].toLowerCase()}/0.png`
+                })
+        }
+        /* ------------------------------------------------------------------------------------ */
+
+        /* Uncomment below and remove above once we get the art */
+
+        // else if (trait['trait-type'] == "Background")
+        //     bgImage = `${baseDir}/${trait['value']}.png`;
+        // else if (['Armor', 'Headpiece', 'Weapon'].includes(trait['trait-type'])) {
+        //     compositeArr.push(
+        //         {
+        //             input: `${baseDir}/${trait['trait-type'].toLowerCase()}/${ranking}/${trait['value']}.png`
+        //         })
+        // }
+        // else {
+        //     compositeArr.push(
+        //         {
+        //             input: `${baseDir}/${trait['trait-type'].toLowerCase()}/${trait['value']}.png`
+        //         })
+        // }
+
+
+    })
+
+    await sharp(bgImage)
+        .composite(compositeArr)
+        .toFile(`./metadata/warriors/generatedWarriors/${JSONObj['TokenID']}.png`);
 }
 
 // 50/50 for gender
@@ -173,7 +228,7 @@ function generateWarrior(tokenId, ranking) {
 // Background some random color
 
 async function main() {
-    const warriorAddress = "0x8bCe54ff8aB45CB075b044AE117b8fD91F9351aB";
+    const warriorAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
 
     const Warrior = await ethers.getContractFactory("Warrior");
     warrior = await Warrior.attach(warriorAddress);
@@ -186,6 +241,7 @@ async function main() {
         const metadataJSONObj = generateWarrior(i, ranking);
 
         writeToJSON(metadataJSONObj);
+        await generateArt(metadataJSONObj);
     }
 
     console.log(`Generated tokenIds ${nextGenerate} to ${numMinted}`);
